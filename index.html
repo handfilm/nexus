@@ -8,16 +8,24 @@
     <title>NEXUS Security & Audit — Enterprise Portal</title>
     <style>
         :root {
-            --primary: #0f172a;
-            --secondary: #1e293b;
+            --primary: #0a0f1b;
+            --secondary: #1a2332;
+            --tertiary: #2d3f54;
             --accent: #3b82f6;
             --accent-light: #60a5fa;
-            --text-primary: #f1f5f9;
+            --accent-bright: #0ea5e9;
+            --emerald: #10b981;
+            --rose: #f43f5e;
+            --amber: #f59e0b;
+            --text-primary: #f8fafc;
             --text-secondary: #cbd5e1;
-            --border-color: rgba(148, 163, 184, 0.1);
-            --glass-bg: rgba(30, 41, 59, 0.7);
-            --glass-border: rgba(148, 163, 184, 0.2);
-            --active-step: 0;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.08);
+            --glass-bg: rgba(26, 35, 50, 0.6);
+            --glass-border: rgba(96, 165, 250, 0.1);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+            --glow-primary: 0 0 30px rgba(59, 130, 246, 0.3);
+            --transition-smooth: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         body.theme-light {
@@ -26,128 +34,111 @@
             --accent: #2563eb;
             --accent-light: #3b82f6;
             --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --border-color: rgba(15, 23, 42, 0.1);
-            --glass-bg: rgba(248, 250, 252, 0.8);
-            --glass-border: rgba(15, 23, 42, 0.2);
+            --text-secondary: #475569;
+            --glass-bg: rgba(248, 250, 252, 0.7);
+            --glass-border: rgba(37, 99, 235, 0.15);
         }
 
         body.theme-minimal {
-            --primary: #ffffff;
-            --secondary: #fafafa;
+            --primary: #fafafa;
+            --secondary: #f5f5f5;
             --accent: #000000;
-            --accent-light: #333333;
             --text-primary: #000000;
-            --text-secondary: #666666;
-            --border-color: rgba(0, 0, 0, 0.1);
-            --glass-bg: rgba(255, 255, 255, 0.95);
-            --glass-border: rgba(0, 0, 0, 0.15);
+            --text-secondary: #333333;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, #0a0f1b 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, #050810 25%, var(--secondary) 100%);
             color: var(--text-primary);
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
+            position: relative;
         }
 
-        body.theme-light {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
-        body.theme-minimal {
-            background: #fafafa;
-        }
+        body.theme-light::before, body.theme-minimal::before { background: none; }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 5px; }
 
-        ::-webkit-scrollbar-track {
-            background: var(--secondary);
-        }
+        .container { max-width: 1440px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--accent);
-            border-radius: 4px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Controls */
         .controls {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 20px; right: 20px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
             z-index: 2000;
-            flex-wrap: wrap;
-            justify-content: flex-end;
         }
 
         .control-group {
             display: flex;
             gap: 8px;
             background: var(--glass-bg);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
-            border-radius: 10px;
-            padding: 8px;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
         .control-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 42px; height: 42px;
+            border-radius: 10px;
             background: transparent;
             border: 2px solid transparent;
             color: var(--text-secondary);
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .control-btn:hover, .control-btn.active {
-            background: var(--accent);
-            color: white;
+        .control-btn:hover {
+            background: rgba(59, 130, 246, 0.1);
             border-color: var(--accent);
+            color: var(--accent-light);
         }
 
-        /* Header */
+        .control-btn.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--glow-primary);
+        }
+
         .portal-header {
             position: fixed;
-            top: 0;
-            width: 100%;
+            top: 0; width: 100%;
             z-index: 1000;
-            backdrop-filter: blur(10px);
-            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            background: rgba(10, 15, 27, 0.4);
             border-bottom: 1px solid var(--glass-border);
-            padding: 20px 0;
-            transition: all 0.3s ease;
+            padding: 18px 0;
         }
 
         .portal-header.scrolled {
-            padding: 10px 0;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 12px 0;
+            background: rgba(10, 15, 27, 0.7);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
         }
 
         .portal-header-content {
@@ -157,66 +148,130 @@
         }
 
         .portal-logo {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent-light);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .portal-client-info {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             align-items: center;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .client-badge {
-            background: rgba(59, 130, 246, 0.15);
-            border: 1px solid var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--glass-border);
             color: var(--accent-light);
-            padding: 6px 12px;
-            border-radius: 6px;
-            transition: all 0.3s ease;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 500;
         }
 
-        .client-badge:hover {
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-        }
-
-        /* Main Content */
         .portal-main {
-            margin-top: 80px;
-            padding: 40px 0;
+            margin-top: 100px;
+            padding: 60px 0;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Sections */
-        .section {
-            margin-bottom: 60px;
-        }
+        .section { margin-bottom: 100px; }
 
         .section-title {
-            font-size: 28px;
+            font-size: 36px;
             font-weight: 700;
-            margin-bottom: 30px;
-            color: var(--accent-light);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
         }
 
-        /* Lifecycle Container */
+        .section-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .status-terminal-container {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            margin-bottom: 60px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-terminal { min-height: 220px; }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 12px;
+            color: var(--accent-light);
+            font-weight: 700;
+        }
+
+        .encryption-badge {
+            color: #10b981;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .terminal-logs {
+            max-height: 280px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+
+        .terminal-line {
+            display: flex;
+            gap: 12px;
+            margin: 6px 0;
+            padding: 4px;
+            border-left: 3px solid transparent;
+        }
+
+        .terminal-line[data-type="success"] { border-left-color: #10b981; color: #10b981; }
+        .terminal-line[data-type="error"] { border-left-color: #f43f5e; color: #f43f5e; }
+        .terminal-line[data-type="info"] { border-left-color: var(--accent); color: var(--accent-light); }
+        .terminal-line[data-type="warn"] { border-left-color: #f59e0b; color: #f59e0b; }
+
+        .timestamp { color: var(--text-muted); min-width: 100px; opacity: 0.7; }
+        .severity { font-weight: 700; min-width: 55px; }
+        .message { flex: 1; }
+
+        .terminal-status {
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
         .lifecycle-container {
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            margin-bottom: 40px;
+            padding: 48px;
+            backdrop-filter: blur(12px);
+            margin-bottom: 60px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
         }
 
-        .timeline {
-            position: relative;
-            padding: 40px 0;
-        }
+        .timeline { position: relative; padding: 60px 0; }
 
         .timeline::before {
             content: '';
@@ -225,81 +280,73 @@
             transform: translateX(-50%);
             width: 2px;
             height: 100%;
-            background: linear-gradient(180deg, var(--accent), transparent);
+            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-light) 50%, transparent 100%);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
         }
 
         .timeline-item {
-            margin-bottom: 50px;
+            margin-bottom: 60px;
             position: relative;
-            opacity: 0.6;
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 0.5;
+            transition: var(--transition-smooth);
         }
 
-        .timeline-item[data-state="COMPLIANCE_PASSED"] {
-            opacity: 0.8;
-        }
-
-        .timeline-item[data-state="ACTIVE"] {
-            opacity: 1;
-        }
+        .timeline-item[data-state="COMPLIANCE_PASSED"] { opacity: 0.75; }
+        .timeline-item[data-state="ACTIVE"] { opacity: 1; }
 
         .timeline-item:nth-child(odd) {
-            margin-left: 0;
-            margin-right: 50%;
+            margin-right: 52%;
             text-align: right;
         }
 
         .timeline-item:nth-child(even) {
-            margin-left: 50%;
-            margin-right: 0;
+            margin-left: 52%;
             text-align: left;
         }
 
         .timeline-dot {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             background: var(--accent);
             border: 4px solid var(--primary);
             border-radius: 50%;
             left: 50%;
             transform: translateX(-50%);
             top: 0;
-            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
         }
 
         .timeline-item[data-state="ACTIVE"] .timeline-dot {
-            width: 28px;
-            height: 28px;
-            border-width: 6px;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
-            animation: pulse-border 2s infinite;
+            width: 32px; height: 32px;
+            border-width: 5px;
+            box-shadow: 0 0 30px rgba(96, 165, 250, 0.6);
+            animation: pulse-dot 2s infinite;
         }
 
-        @keyframes pulse-border {
-            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
-            50% { box-shadow: 0 0 30px rgba(59, 130, 246, 1); }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 30px rgba(96, 165, 250, 0.6); }
+            50% { box-shadow: 0 0 50px rgba(96, 165, 250, 0.8); }
         }
 
         .timeline-content {
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
-            padding: 30px;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
+            padding: 32px;
+            backdrop-filter: blur(12px);
+            transition: var(--transition-smooth);
         }
 
         .timeline-item[data-state="ACTIVE"] .timeline-content {
             border-color: var(--accent);
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15);
-            background: rgba(59, 130, 246, 0.08);
+            box-shadow: 0 16px 48px rgba(59, 130, 246, 0.2);
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .timeline-content h3 {
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: var(--accent-light);
         }
 
@@ -310,469 +357,256 @@
 
         .state-badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
             margin-left: 10px;
         }
 
-        .state-badge.PENDING {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-        }
+        .state-badge.PENDING { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .state-badge.ACTIVE { background: rgba(59, 130, 246, 0.2); color: var(--accent-light); }
+        .state-badge.COMPLIANCE_PASSED { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 
-        .state-badge.ACTIVE {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent-light);
-            animation: blink 1s infinite;
-        }
-
-        .state-badge.COMPLIANCE_PASSED {
-            background: rgba(74, 222, 128, 0.2);
-            color: #4ade80;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        /* Terminal */
-        .status-terminal-container {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            margin-bottom: 40px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-        }
-
-        .status-terminal {
-            min-height: 200px;
-        }
-
-        .terminal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 10px;
-            color: var(--accent-light);
-        }
-
-        .terminal-title {
-            font-weight: 600;
-        }
-
-        .encryption-badge {
-            color: #4ade80;
-            font-size: 11px;
-        }
-
-        .terminal-logs {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-
-        .terminal-line {
-            display: flex;
-            gap: 10px;
-            margin: 5px 0;
-            padding: 3px;
-            border-left: 2px solid transparent;
-        }
-
-        .terminal-line[data-type="success"] {
-            border-left-color: #4ade80;
-            color: #4ade80;
-        }
-
-        .terminal-line[data-type="error"] {
-            border-left-color: #f87171;
-            color: #f87171;
-        }
-
-        .terminal-line[data-type="info"] {
-            border-left-color: var(--accent);
-            color: var(--accent-light);
-        }
-
-        .terminal-line[data-type="warn"] {
-            border-left-color: #fbbf24;
-            color: #fbbf24;
-        }
-
-        .timestamp {
-            color: var(--text-secondary);
-            min-width: 100px;
-        }
-
-        .severity {
-            font-weight: 600;
-            min-width: 50px;
-        }
-
-        .message {
-            flex: 1;
-        }
-
-        .terminal-status {
-            padding-top: 10px;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 11px;
-        }
-
-        /* Services Grid */
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
         }
 
         .service-card {
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
+            border-radius: 16px;
+            padding: 28px;
+            backdrop-filter: blur(12px);
+            transition: var(--transition-smooth);
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         }
 
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .service-card:hover::before { transform: scaleX(1); }
         .service-card:hover {
             border-color: var(--accent);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
-            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.15);
+            transform: translateY(-8px);
         }
 
         .service-card h3 {
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 18px;
+            font-weight: 700;
             margin-bottom: 10px;
             color: var(--text-primary);
         }
 
         .service-card p {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-secondary);
-            margin-bottom: 15px;
-            line-height: 1.5;
+            margin-bottom: 20px;
+            line-height: 1.6;
         }
 
         .service-pricing {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 18px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
-        .price-range {
-            color: var(--accent-light);
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .duration {
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
+        .price-range { color: var(--accent-light); font-weight: 700; font-size: 15px; }
+        .duration { color: var(--text-muted); font-size: 12px; }
 
         .btn-add-to-estimate {
             width: 100%;
-            padding: 10px;
-            background: linear-gradient(135deg, var(--accent), #2563eb);
+            padding: 12px;
+            background: var(--gradient-primary);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 14px;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
         }
 
         .btn-add-to-estimate:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(59, 130, 246, 0.3);
         }
 
-        /* Estimate Summary */
         .estimate-summary {
-            background: linear-gradient(135deg, var(--accent), #2563eb);
+            background: var(--gradient-primary);
             color: white;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 40px;
-            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.2);
         }
 
-        body.theme-light .estimate-summary,
-        body.theme-minimal .estimate-summary {
-            background: linear-gradient(135deg, var(--accent), #1d4ed8);
-        }
-
-        .estimate-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
+        .estimate-title { font-size: 28px; font-weight: 700; margin-bottom: 24px; }
 
         .estimate-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
         }
 
         .estimate-detail {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 18px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .estimate-detail-label {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 5px;
+            font-size: 11px;
+            opacity: 0.85;
+            margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            font-weight: 600;
         }
 
         .estimate-detail-value {
-            font-size: 20px;
-            font-weight: 700;
+            font-size: 22px;
+            font-weight: 800;
         }
 
-        .estimate-actions {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(74, 222, 128, 0.1);
-            border-left: 4px solid #4ade80;
-            border-radius: 4px;
-        }
-
-        .estimate-actions button {
-            background: rgba(74, 222, 128, 0.2);
-            color: #4ade80;
-            border: 1px solid #4ade80;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .estimate-actions button:hover {
-            background: rgba(74, 222, 128, 0.3);
-        }
-
-        /* Footer */
         footer {
             border-top: 1px solid var(--glass-border);
             padding: 40px 0;
             text-align: center;
             color: var(--text-secondary);
             font-size: 13px;
-            margin-top: 60px;
         }
 
-        /* Responsive */
+        .en { display: block; }
+        .bn { display: none; }
+        body.lang-bn .en { display: none; }
+        body.lang-bn .bn { display: block; }
+
         @media (max-width: 768px) {
-            .timeline::before {
-                left: 10px;
+            .timeline::before { left: 12px; }
+            .timeline-item:nth-child(odd), .timeline-item:nth-child(even) {
+                margin: 0; padding-left: 50px; text-align: left;
             }
-
-            .timeline-item:nth-child(odd),
-            .timeline-item:nth-child(even) {
-                margin-left: 0;
-                margin-right: 0;
-                padding-left: 50px;
-                text-align: left;
-            }
-
-            .timeline-dot {
-                left: 0;
-            }
-
-            .portal-header-content {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .portal-client-info {
-                flex-direction: column;
-                gap: 10px;
-                font-size: 12px;
-            }
-
-            .controls {
-                top: auto;
-                bottom: 20px;
-                right: 10px;
-            }
-
-            .section-title {
-                font-size: 22px;
-            }
+            .timeline-dot { left: 0; }
         }
     </style>
 </head>
 <body class="theme-dark lang-en">
 
-<!-- Controls -->
 <div class="controls">
     <div class="control-group">
-        <button class="control-btn active" title="Dark Theme" onclick="setTheme('dark')">🌙</button>
-        <button class="control-btn" title="Light Theme" onclick="setTheme('light')">☀️</button>
-        <button class="control-btn" title="Professional Theme" onclick="setTheme('minimal')">💼</button>
+        <button class="control-btn active" onclick="setTheme('dark')">🌙</button>
+        <button class="control-btn" onclick="setTheme('light')">☀️</button>
+        <button class="control-btn" onclick="setTheme('minimal')">💼</button>
     </div>
     <div class="control-group">
-        <button class="control-btn active" title="English" onclick="setLang('en')">EN</button>
-        <button class="control-btn" title="Bangla" onclick="setLang('bn')">BN</button>
+        <button class="control-btn active" onclick="setLang('en')">EN</button>
+        <button class="control-btn" onclick="setLang('bn')">BN</button>
     </div>
 </div>
 
-<!-- Header -->
 <header class="portal-header" id="portal-header">
     <div class="container">
         <div class="portal-header-content">
             <div class="portal-logo">⬡ NEXUS</div>
             <div class="portal-client-info">
-                <span class="client-badge">Client ID: <span id="client-id">—</span></span>
-                <span class="client-badge">Audit Step: <span id="audit-step">0/8</span></span>
+                <span class="client-badge">Client: <span id="client-id">—</span></span>
+                <span class="client-badge">Step: <span id="audit-step">0/8</span></span>
                 <span class="client-badge">Status: <span id="sync-status">IDLE</span></span>
             </div>
         </div>
     </div>
 </header>
 
-<!-- Main Content -->
 <main class="portal-main">
     <div class="container">
-
-        <!-- Status Terminal -->
         <div class="section">
             <div class="status-terminal-container">
                 <div id="status-terminal"></div>
             </div>
         </div>
 
-        <!-- Audit Lifecycle -->
         <div class="section">
-            <h2 class="section-title">📊 Audit Lifecycle Tracking</h2>
+            <h2 class="section-title">📊 <span class="en">Audit Lifecycle Tracking</span><span class="bn">অডিট জীবনচক্র ট্র্যাকিং</span></h2>
+            <p class="section-subtitle"><span class="en">Real-time progress monitoring through 8-step ISO 27001 certification</span><span class="bn">8-ধাপ ISO 27001 সার্টিফিকেশনের মাধ্যমে রিয়েল-টাইম অগ্রগতি পর্যবেক্ষণ</span></p>
             <div class="lifecycle-container">
                 <div class="timeline" id="lifecycle-timeline"></div>
             </div>
         </div>
 
-        <!-- Service Estimator -->
         <div class="section">
-            <h2 class="section-title">💼 Service Estimator</h2>
+            <h2 class="section-title">💼 <span class="en">Service Estimator</span><span class="bn">সেবা অনুমানক</span></h2>
+            <p class="section-subtitle"><span class="en">Select services and get instant pricing</span><span class="bn">সেবা নির্বাচন করুন এবং তাৎক্ষণিক মূল্য পান</span></p>
             <div class="services-grid" id="services-grid"></div>
         </div>
 
-        <!-- Estimate Summary -->
         <div id="estimate-summary-container"></div>
-
     </div>
 </main>
 
-<!-- Footer -->
 <footer>
     <div class="container">
-        <p>© 2025 NEXUS Security & Audit. ISO 27001 Certified | Enterprise Portal v1.0</p>
+        <p>© 2025 NEXUS Security & Audit | ISO 27001 Certified | Enterprise Portal v1.0</p>
     </div>
 </footer>
 
-<!-- Core Engines -->
 <script src="./NEXUS_Core_Engine.js"></script>
 <script src="./AuditLifecycleController.js"></script>
 <script src="./ServiceEstimator.js"></script>
 <script src="./StatusTerminalUI.js"></script>
 
-<!-- Application Logic -->
 <script>
-    // Initialize Engines
-    const NEXUS_Engine = NEXUS;
-    const NEXUS_Lifecycle = new AuditLifecycleController(NEXUS_Engine);
-    const NEXUS_Estimator = new ServiceEstimator(NEXUS_Engine);
-    const NEXUS_Terminal = new StatusTerminalUI(NEXUS_Engine, '#status-terminal');
+    function initializeNEXUS() {
+        const NEXUS_Engine = NEXUS;
+        const NEXUS_Lifecycle = new AuditLifecycleController(NEXUS_Engine);
+        const NEXUS_Estimator = new ServiceEstimator(NEXUS_Engine);
+        const NEXUS_Terminal = new StatusTerminalUI(NEXUS_Engine, '#status-terminal');
 
-    /**
-     * Set theme
-     */
-    function setTheme(theme) {
-        document.body.className = document.body.className.replace(/theme-\w+/, `theme-${theme}`);
-        NEXUS_Engine.setTheme(theme);
-        updateThemeButtons(theme);
-    }
+        window.setTheme = function(theme) {
+            document.body.className = document.body.className.replace(/theme-\w+/, `theme-${theme}`);
+            NEXUS_Engine.setTheme(theme);
+            document.querySelectorAll('.control-group:first-child .control-btn').forEach(b => b.classList.remove('active'));
+            const idx = { 'dark': 0, 'light': 1, 'minimal': 2 }[theme];
+            document.querySelectorAll('.control-group:first-child .control-btn')[idx].classList.add('active');
+        };
 
-    /**
-     * Set language
-     */
-    function setLang(lang) {
-        if (lang === 'bn') {
-            document.body.classList.add('lang-bn');
-        } else {
-            document.body.classList.remove('lang-bn');
-        }
-        NEXUS_Engine.setLanguage(lang);
-        updateLangButtons(lang);
-    }
+        window.setLang = function(lang) {
+            document.body.classList.toggle('lang-bn', lang === 'bn');
+            NEXUS_Engine.setLanguage(lang);
+            document.querySelectorAll('.control-group:last-child .control-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.control-group:last-child .control-btn')[lang === 'en' ? 0 : 1].classList.add('active');
+        };
 
-    /**
-     * Update theme buttons
-     */
-    function updateThemeButtons(theme) {
-        document.querySelectorAll('.control-group:first-child .control-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const themeIcons = { 'dark': 0, 'light': 1, 'minimal': 2 };
-        document.querySelectorAll('.control-group:first-child .control-btn')[themeIcons[theme]].classList.add('active');
-    }
-
-    /**
-     * Update language buttons
-     */
-    function updateLangButtons(lang) {
-        document.querySelectorAll('.control-group:last-child .control-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const langIndex = lang === 'en' ? 0 : 1;
-        document.querySelectorAll('.control-group:last-child .control-btn')[langIndex].classList.add('active');
-    }
-
-    /**
-     * Initialize on DOM ready
-     */
-    window.addEventListener('DOMContentLoaded', () => {
-        // Restore persisted state
         NEXUS_Engine.restoreState();
-        
-        // Initialize UI
+        window.setTheme(NEXUS_Engine.getTheme());
+        window.setLang(NEXUS_Engine.getLanguage());
+
         NEXUS_Lifecycle.renderLifecycleUI('#lifecycle-timeline');
         NEXUS_Estimator.renderServiceCards('#services-grid');
 
-        // Apply saved theme and language
-        setTheme(NEXUS_Engine.getTheme());
-        setLang(NEXUS_Engine.getLanguage());
-
-        // Mock JWT session for demo
         const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRfaWQiOiJORVhVUy0yMDI2LVg5IiwiYXVkaXRfbWF0cml4IjoicHJvYWN0aXZlIiwic2NvcGUiOiJmdWxsIiwiaWF0IjoxNzA1MDAwMDAwfQ.abc123';
         NEXUS_Engine.establishSecureSession(mockToken);
-
-        // Update header with client info
         document.getElementById('client-id').textContent = NEXUS_Engine.clientMeta.client_id;
 
-        // Subscribe to state changes
         NEXUS_Engine.subscribe('TELEMETRY_COMMITTED', (data) => {
             document.getElementById('audit-step').textContent = `${data.audit_track_step}/8`;
             document.getElementById('sync-status').textContent = 'SYNCED';
@@ -784,46 +618,29 @@
             NEXUS_Estimator.renderEstimateSummary('#estimate-summary-container');
         });
 
-        NEXUS_Engine.subscribe('ESTIMATE_CLEARED', () => {
-            document.getElementById('estimate-summary-container').innerHTML = '';
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('portal-header');
+            header.classList.toggle('scrolled', window.scrollY > 50);
         });
-    });
 
-    /**
-     * Header scroll effect
-     */
-    window.addEventListener('scroll', () => {
-        const header = document.getElementById('portal-header');
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    });
-
-    /**
-     * Simulate telemetry ingestion (demo)
-     */
-    function ingestSampleTelemetry(step = 3) {
-        const payload = {
-            client_token: 'NEXUS-2026-X9',
-            audit_track_step: step,
-            active_compliance_index: 85.8,
-            critical_gaps_identified: 0,
-            pending_remediations: 4,
-            system_encryption_standard: 'AES-256-GCM'
+        window.ingestSampleTelemetry = function(step = 3) {
+            NEXUS_Engine.ingestTelemetry({
+                client_token: 'NEXUS-2026-X9',
+                audit_track_step: step,
+                active_compliance_index: 85.8,
+                critical_gaps_identified: 0,
+                pending_remediations: 4,
+                system_encryption_standard: 'AES-256-GCM'
+            });
         };
-        NEXUS_Engine.ingestTelemetry(payload);
+
+        console.log('✅ NEXUS Portal v1.0 initialized');
     }
 
-    /**
-     * Demo: Advance audit step
-     */
-    function advanceAuditStep() {
-        const currentStep = NEXUS_Engine.stateManager.lifecycle_step;
-        if (currentStep < 8) {
-            ingestSampleTelemetry(currentStep + 1);
-        }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeNEXUS);
+    } else {
+        initializeNEXUS();
     }
 </script>
 
