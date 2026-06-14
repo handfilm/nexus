@@ -1,1 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H&H NEXUS // GRC COMMAND</title>
+<!-- Drop at handfilm.github.io/nexus/os/grc/ · same NexusBus pattern as the ERP shell ·
+     SIM_MODE = synthetic ghost telemetry (showroom) · LIVE_MODE = halt sim, pull Apps Script doGet -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.14);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased}
+::selection{background:var(--gold);color:#000}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,10,10,.9);backdrop-filter:blur(6px);z-index:10}
+.bar__id{display:flex;align-items:center;gap:11px}
+.bar__hex{color:var(--gold);font-size:17px}
+.bar__id b{font-size:14px;letter-spacing:3px}.bar__id span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.bar__mid{display:flex;gap:0}
+.k{padding:0 15px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:16px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}
+.k span{font-size:8px;letter-spacing:1.3px;color:var(--mute2);text-transform:uppercase}
+.tgl{display:flex;border:1px solid var(--line)}
+.tgl button{background:transparent;color:var(--muted);border:0;padding:7px 13px;font:inherit;font-size:10px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase}
+.tgl button.on{background:var(--gold);color:#000;font-weight:700}
+.tgl button.on.live{background:var(--bad)}
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:6px;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.wrap{padding:18px 22px;display:grid;grid-template-columns:280px 1fr 330px;gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line)}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c{font-size:9px;color:var(--mute2);letter-spacing:1px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+
+/* posture gauge */
+.gauge{display:flex;flex-direction:column;align-items:center;padding:20px 14px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge__c{position:relative;width:140px;height:140px}
+.gauge__v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge__v b{font-size:30px;font-weight:700;line-height:1}
+.gauge__v span{font-size:8px;letter-spacing:2px;color:var(--mute2);text-transform:uppercase;margin-top:3px}
+.gauge__legend{display:flex;gap:14px;margin-top:14px;font-size:9px;color:var(--muted);letter-spacing:.5px}
+.gauge__legend i{font-style:normal;font-weight:700}
+
+/* theme heatmap */
+.heat{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);padding:1px}
+.heat__c{padding:13px;background:var(--panel2)}
+.heat__c .t{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.heat__c .p{font-size:22px;font-weight:700;margin-top:5px}
+.heat__c .n{font-size:8.5px;color:var(--mute2);margin-top:2px}
+.heat__bar{height:3px;margin-top:8px;background:var(--soft)}
+.heat__bar i{display:block;height:100%;transition:width .5s}
+
+/* findings bars */
+.fbars{padding:14px}
+.fbar{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:11px}
+.fbar:last-child{margin-bottom:0}
+.fbar .lbl{width:62px;color:var(--muted);font-size:9px;letter-spacing:.5px;text-transform:uppercase}
+.fbar .track{flex:1;height:14px;background:var(--soft);position:relative}
+.fbar .track i{display:block;height:100%;transition:width .4s}
+.fbar .v{width:24px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* risk matrix */
+.matrix{padding:14px}
+.mgrid{display:grid;grid-template-columns:18px repeat(5,1fr);grid-template-rows:repeat(5,30px) 18px;gap:2px}
+.mcell{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:#000;position:relative;cursor:default}
+.mcell.empty{opacity:.32}
+.maxis{display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--mute2)}
+.mleg{display:flex;justify-content:space-between;margin-top:10px;font-size:8px;color:var(--mute2);letter-spacing:1px}
+
+/* burndown */
+.burn{padding:14px 14px 10px}
+.burn svg{width:100%;height:90px;display:block}
+.burn__ax{display:flex;justify-content:space-between;font-size:8px;color:var(--mute2);margin-top:4px;letter-spacing:1px}
+
+/* control register */
+.reg{max-height:340px;overflow-y:auto}
+.reg table{width:100%;border-collapse:collapse;font-size:10.5px}
+.reg th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:8px 14px;color:var(--mute2);font-weight:400;font-size:8px;letter-spacing:1.4px;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.reg td{padding:7px 14px;border-bottom:1px solid var(--soft)}
+.reg td.id{color:var(--gold);font-variant-numeric:tabular-nums}
+.reg td.tt{color:var(--muted)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+
+/* live feed */
+.feed{max-height:560px;overflow-y:auto;padding:0}
+.fe{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--soft);animation:fin .25s ease}
+@keyframes fin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.fe__t{color:var(--mute2);font-size:8.5px;white-space:nowrap;padding-top:1px;font-variant-numeric:tabular-nums}
+.fe__b{flex:1;font-size:10.5px;line-height:1.45}
+.fe__tag{font-size:7.5px;letter-spacing:1px;padding:1px 5px;border:1px solid;text-transform:uppercase;margin-right:6px}
+.tag-pass{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.tag-nc{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.tag-risk{color:var(--amber);border-color:rgba(224,138,61,.4)}
+.tag-fix{color:var(--gold);border-color:var(--gold-edge)}
+.fe__b b{color:var(--gold)}
+.awaiting{padding:40px 20px;text-align:center;color:var(--mute2);font-size:10px;letter-spacing:1px;line-height:1.8}
+.awaiting b{color:var(--bad);display:block;margin-bottom:6px;letter-spacing:2px}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}.bar__mid{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__id"><span class="bar__hex">⬡</span><div><b>H&amp;H NEXUS</b><span>GRC // COMMAND CENTER</span></div></div>
+  <div class="bar__mid">
+    <div class="k gold"><b id="kp-post">—</b><span>Posture</span></div>
+    <div class="k"><b id="kp-ctrl">—</b><span>Controls</span></div>
+    <div class="k bad"><b id="kp-find">—</b><span>Open NCs</span></div>
+    <div class="k bad"><b id="kp-risk">—</b><span>Top Risk</span></div>
+    <div class="k ok"><b id="kp-eng">1</b><span>Engagement</span></div>
+  </div>
+  <div class="tgl">
+    <button id="b-sim" class="on">◉ SIM</button>
+    <button id="b-live" class="">LIVE</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <div class="stack">
+    <div class="panel">
+      <div class="panel__h"><h3>Compliance <i>Posture</i></h3><span class="c" id="post-eng">ENG-0042</span></div>
+      <div class="gauge">
+        <div class="gauge__c">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="52" fill="none" stroke="#1b1b1b" stroke-width="11"/>
+            <circle id="g-arc" cx="70" cy="70" r="52" fill="none" stroke="#d4af37" stroke-width="11" stroke-linecap="butt" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s,stroke .6s"/>
+          </svg>
+          <div class="gauge__v"><b id="g-pct">0%</b><span>Compliant</span></div>
+        </div>
+        <div class="gauge__legend">
+          <span><i style="color:var(--ok)" id="lg-c">0</i> pass</span>
+          <span><i style="color:var(--gold)" id="lg-r">0</i> review</span>
+          <span><i style="color:var(--bad)" id="lg-n">0</i> NC</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel__h"><h3>Annex A <i>Heatmap</i></h3><span class="c">4 themes</span></div>
+      <div class="heat" id="heat"></div>
+    </div>
+    <div class="panel">
+      <div class="panel__h"><h3>Findings <i>· Severity</i></h3><span class="c" id="fc">0</span></div>
+      <div class="fbars" id="fbars"></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="stack">
+    <div class="row2">
+      <div class="panel">
+        <div class="panel__h"><h3>Risk <i>Matrix</i> 5×5</h3><span class="c">L × I</span></div>
+        <div class="matrix"><div class="mgrid" id="mgrid"></div>
+          <div class="mleg"><span>← LOW IMPACT</span><span>HIGH →</span></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel__h"><h3>Remediation <i>Burndown</i></h3><span class="c">open NCs</span></div>
+        <div class="burn"><svg viewBox="0 0 300 90" preserveAspectRatio="none" id="burn"></svg>
+          <div class="burn__ax"><span>T-0</span><span id="burn-now">LIVE</span></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel__h"><h3>Control <i>Register</i> · ISO 27001:2022</h3><span class="c" id="reg-c">0 controls</span></div>
+      <div class="reg"><table><thead><tr><th>ID</th><th>Theme</th><th>Control</th><th>State</th><th style="text-align:right">Mat.</th></tr></thead><tbody id="reg-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel">
+    <div class="panel__h"><h3><span class="live-dot" id="feed-dot"></span>Live <i>Telemetry</i></h3><span class="c" id="feed-c">0 evt</span></div>
+    <div class="feed" id="feed"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ==================== BUS ==================== */
+const Bus=(()=>{const m=new Map();return{on:(e,f)=>{(m.get(e)||m.set(e,new Set()).get(e)).add(f);return()=>m.get(e)&&m.get(e).delete(f)},emit:(e,p)=>{m.has(e)&&m.get(e).forEach(f=>f(p))}}})();
+
+/* ==================== ISO 27001:2022 ANNEX A CATALOG (representative across 4 themes) ==================== */
+const CATALOG=[
+ ["A.5.1","ORG","Policies for information security"],["A.5.7","ORG","Threat intelligence"],
+ ["A.5.8","ORG","Information security in project management"],["A.5.9","ORG","Inventory of associated assets"],
+ ["A.5.10","ORG","Acceptable use of assets"],["A.5.12","ORG","Classification of information"],
+ ["A.5.15","ORG","Access control"],["A.5.17","ORG","Authentication information"],
+ ["A.5.23","ORG","Infosec for use of cloud services"],["A.5.24","ORG","Infosec incident mgmt planning"],
+ ["A.5.30","ORG","ICT readiness for business continuity"],
+ ["A.6.1","PPL","Screening"],["A.6.2","PPL","Terms & conditions of employment"],
+ ["A.6.3","PPL","Security awareness & training"],["A.6.4","PPL","Disciplinary process"],
+ ["A.6.7","PPL","Remote working"],["A.6.8","PPL","Security event reporting"],
+ ["A.7.1","PHY","Physical security perimeters"],["A.7.2","PHY","Physical entry"],
+ ["A.7.4","PHY","Physical security monitoring"],["A.7.8","PHY","Equipment siting & protection"],
+ ["A.7.10","PHY","Storage media"],["A.7.14","PHY","Secure disposal / re-use"],
+ ["A.8.1","TEC","User endpoint devices"],["A.8.5","TEC","Secure authentication"],
+ ["A.8.7","TEC","Protection against malware"],["A.8.8","TEC","Technical vulnerability mgmt"],
+ ["A.8.9","TEC","Configuration management"],["A.8.12","TEC","Data leakage prevention"],
+ ["A.8.15","TEC","Logging"],["A.8.16","TEC","Monitoring activities"],
+ ["A.8.23","TEC","Web filtering"],["A.8.24","TEC","Use of cryptography"],
+ ["A.8.25","TEC","Secure development life cycle"],["A.8.28","TEC","Secure coding"],
+ ["A.8.34","TEC","Protection during audit testing"]
+].map(([id,theme,title])=>({id,theme,title}));
+const THEMES={ORG:"Organizational",PPL:"People",PHY:"Physical",TEC:"Technological"};
+const STATES=["NOT_STARTED","IN_REVIEW","COMPLIANT","NON_CONFORMANT","REMEDIATION"];
+const SEV=["MAJOR_NC","MINOR_NC","OBSERVATION","OFI"];
+
+/* ==================== STORE + STATE MACHINES ==================== */
+const Store=(()=>{
+ const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+ const pick=a=>a[Math.floor(Math.random()*a.length)];
+ const ENG="ENG-0042";
+ // assessments: one per control, seeded distribution
+ const assessments=CATALOG.map((c,i)=>{
+   const r=Math.random();
+   let st = r<.42?"COMPLIANT": r<.62?"IN_REVIEW": r<.74?"NON_CONFORMANT": r<.84?"REMEDIATION":"NOT_STARTED";
+   if(c.id==="A.7.1"||c.id==="A.7.2"){} // keep physical applicable
+   return {aid:"AS-"+c.id,eid:ENG,cid:c.id,theme:c.theme,title:c.title,state:st,
+           maturity: st==="COMPLIANT"?rnd(4,5):st==="IN_REVIEW"?rnd(2,3):st==="REMEDIATION"?rnd(2,3):st==="NON_CONFORMANT"?rnd(0,2):0,
+           applicable: !(c.id==="A.7.14"&&Math.random()<.3)};
+ });
+ // findings derived from NC/remediation
+ let fseq=0;
+ const findings=[];
+ assessments.filter(a=>a.state==="NON_CONFORMANT"||a.state==="REMEDIATION").forEach(a=>{
+   findings.push({fid:"NC-"+String(++fseq).padStart(3,"0"),aid:a.aid,cid:a.cid,
+     sev: a.state==="NON_CONFORMANT"?pick(["MAJOR_NC","MINOR_NC"]):pick(["MINOR_NC","OBSERVATION"]),
+     state: a.state==="REMEDIATION"?"IN_REMEDIATION":"OPEN"});
+ });
+ // risk register
+ const assets=["Customer DB","Auth Gateway","Payment API","Core Banking LDAP","Cloud Backup S3","Admin VPN","Mobile App","Log Pipeline"];
+ const threats=["SQL injection","Credential stuffing","Privilege escalation","Misconfig exposure","Ransomware","Insider exfiltration","MITM","Unpatched CVE"];
+ const risks=assets.map((as,i)=>{const l=rnd(2,5),im=rnd(2,5);return{rid:"RSK-"+String(i+1).padStart(3,"0"),asset:as,threat:threats[i],l,im,score:l*im,
+   treatment:pick(["MITIGATE","MITIGATE","ACCEPT","TRANSFER"]),state:pick(["ASSESSED","TREATMENT_PLANNED","MONITORED"])}});
+ const events=[];
+ return {ENG,assessments,findings,risks,events,fseq:()=>++fseq,rnd,pick,
+   applicable:()=>assessments.filter(a=>a.applicable)};
+})();
+
+/* ==================== READ-MODEL (dashboard = projection over store) ==================== */
+const View={
+ posture(){const a=Store.applicable();const c=a.filter(x=>x.state==="COMPLIANT").length;return{pct:Math.round(c/a.length*100),compliant:c,
+   review:a.filter(x=>x.state==="IN_REVIEW").length,nc:a.filter(x=>["NON_CONFORMANT","REMEDIATION"].includes(x.state)).length,total:a.length}},
+ theme(){return Object.keys(THEMES).map(t=>{const a=Store.applicable().filter(x=>x.theme===t);const c=a.filter(x=>x.state==="COMPLIANT").length;
+   return{t,name:THEMES[t],pct:a.length?Math.round(c/a.length*100):0,c,n:a.length}})},
+ sev(){const o=Store.findings.filter(f=>f.state!=="CLOSED");return SEV.map(s=>({s,n:o.filter(f=>f.sev===s).length}))},
+ matrix(){const g={};Store.risks.forEach(r=>{const k=r.l+"-"+r.im;g[k]=(g[k]||0)+1});return g},
+ topRisk(){return Math.max(...Store.risks.map(r=>r.score))},
+ openNC(){return Store.findings.filter(f=>f.state!=="CLOSED").length}
+};
+
+/* ==================== COLOR HELPERS ==================== */
+const hx=h=>{h=h.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
+const mix=(a,b,t)=>{const x=hx(a),y=hx(b);return`rgb(${x.map((v,i)=>Math.round(v+(y[i]-v)*t)).join(',')})`};
+const postC=p=>p<50?mix('#e0533d','#d4af37',p/50):mix('#d4af37','#5fb87a',(p-50)/50);
+const riskC=s=>s>=15?'#e0533d':s>=10?'#e08a3d':s>=5?'#d4af37':'#5fb87a';
+const stC={NOT_STARTED:'#555',IN_REVIEW:'#d4af37',COMPLIANT:'#5fb87a',NON_CONFORMANT:'#e0533d',REMEDIATION:'#e08a3d'};
+
+/* ==================== RENDERERS ==================== */
+const $=s=>document.querySelector(s);
+function renderPosture(){const p=View.posture();
+ $("#g-arc").style.strokeDashoffset=326.7*(1-p.pct/100);$("#g-arc").style.stroke=postC(p.pct);
+ $("#g-pct").textContent=p.pct+"%";$("#g-pct").style.color=postC(p.pct);
+ $("#lg-c").textContent=p.compliant;$("#lg-r").textContent=p.review;$("#lg-n").textContent=p.nc;
+ $("#kp-post").textContent=p.pct+"%";$("#kp-find").textContent=View.openNC();$("#kp-risk").textContent=View.topRisk();
+ $("#kp-ctrl").textContent=p.total;}
+function renderHeat(){$("#heat").innerHTML=View.theme().map(x=>`<div class="heat__c"><div class="t">${x.name}</div>
+ <div class="p" style="color:${postC(x.pct)}">${x.pct}%</div><div class="n">${x.c}/${x.n} compliant</div>
+ <div class="heat__bar"><i style="width:${x.pct}%;background:${postC(x.pct)}"></i></div></div>`).join("")}
+function renderSev(){const s=View.sev();const max=Math.max(1,...s.map(x=>x.n));const col={MAJOR_NC:'#e0533d',MINOR_NC:'#e08a3d',OBSERVATION:'#d4af37',OFI:'#5fb87a'};
+ $("#fc").textContent=s.reduce((a,x)=>a+x.n,0);$("#fbars").innerHTML=s.map(x=>`<div class="fbar">
+ <span class="lbl">${x.s.replace('_NC','')}</span><div class="track"><i style="width:${x.n/max*100}%;background:${col[x.s]}"></i></div>
+ <span class="v">${x.n}</span></div>`).join("")}
+function renderMatrix(){const g=View.matrix();let h="";
+ for(let l=5;l>=1;l--){h+=`<div class="maxis">${l}</div>`;
+   for(let im=1;im<=5;im++){const n=g[l+"-"+im]||0;const s=l*im;
+     h+=`<div class="mcell ${n?'':'empty'}" style="background:${riskC(s)}" title="L${l}×I${im}=${s}">${n||''}</div>`}}
+ h+=`<div class="maxis"></div>`;for(let im=1;im<=5;im++)h+=`<div class="maxis">${im}</div>`;
+ $("#mgrid").innerHTML=h}
+let burnHist=[View.openNC()];
+function renderBurn(){const max=Math.max(...burnHist,1);const n=burnHist.length;
+ const pts=burnHist.map((v,i)=>`${(i/(Math.max(n-1,1)))*300},${90-(v/max)*78-6}`).join(" ");
+ const area=`0,90 ${pts} 300,90`;
+ $("#burn").innerHTML=`<polygon points="${area}" fill="rgba(224,83,61,.10)"/>
+   <polyline points="${pts}" fill="none" stroke="#e0533d" stroke-width="1.5"/>
+   ${burnHist.map((v,i)=>`<circle cx="${(i/Math.max(n-1,1))*300}" cy="${90-(v/max)*78-6}" r="1.6" fill="#e0533d"/>`).join("")}`}
+function renderReg(){$("#reg-c").textContent=Store.assessments.length+" controls";
+ $("#reg-body").innerHTML=Store.assessments.map(a=>`<tr>
+ <td class="id">${a.cid}</td><td class="tt">${THEMES[a.theme].slice(0,3).toUpperCase()}</td>
+ <td>${a.title}${a.applicable?'':' <span style="color:#555">(N/A)</span>'}</td>
+ <td><span class="dot" style="background:${stC[a.state]}"></span><span class="st" style="color:${stC[a.state]}">${a.state.replace('_',' ')}</span></td>
+ <td style="text-align:right;color:var(--muted)">${a.maturity}/5</td></tr>`).join("")}
+function pushFeed(tag,cls,html){const f=$("#feed");if(f.querySelector(".awaiting"))f.innerHTML="";
+ const t=new Date().toLocaleTimeString('en-GB');
+ const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__t">${t}</span><div class="fe__b"><span class="fe__tag ${cls}">${tag}</span>${html}</div>`;
+ f.prepend(e);while(f.children.length>40)f.lastChild.remove();
+ Store.events.push({t,tag});$("#feed-c").textContent=Store.events.length+" evt"}
+
+function renderAll(){renderPosture();renderHeat();renderSev();renderMatrix();renderBurn();renderReg()}
+
+/* ==================== SIM ENGINE (ghost telemetry) ==================== */
+let SIM=null;
+const TRANS={ // valid forward transitions
+ NOT_STARTED:["IN_REVIEW"],IN_REVIEW:["COMPLIANT","NON_CONFORMANT"],
+ NON_CONFORMANT:["REMEDIATION"],REMEDIATION:["COMPLIANT"],COMPLIANT:[]
+};
+function tick(){
+ const roll=Math.random();
+ if(roll<.5){ // advance a control assessment
+   const cand=Store.applicable().filter(a=>TRANS[a.state].length);
+   const a=Store.pick(cand);if(!a)return;
+   const next=Store.pick(TRANS[a.state]);const prev=a.state;a.state=next;
+   a.maturity=next==="COMPLIANT"?Store.rnd(4,5):next==="IN_REVIEW"?Store.rnd(2,3):next==="REMEDIATION"?Store.rnd(2,3):Store.rnd(0,2);
+   if(next==="NON_CONFORMANT"){const fid="NC-"+String(Store.fseq()).padStart(3,"0");
+     const sev=Store.pick(["MAJOR_NC","MINOR_NC","MINOR_NC","OBSERVATION"]);
+     Store.findings.push({fid,aid:a.aid,cid:a.cid,sev,state:"OPEN"});
+     pushFeed(sev.replace('_NC',''),"tag-nc",`<b>${a.cid}</b> ${a.title} → non-conformity raised <b>${fid}</b>`);}
+   else if(next==="COMPLIANT"){const f=Store.findings.find(x=>x.aid===a.aid&&x.state!=="CLOSED");
+     if(f){f.state="CLOSED";pushFeed("FIX","tag-fix",`<b>${f.fid}</b> remediated · <b>${a.cid}</b> verified compliant`);}
+     else pushFeed("PASS","tag-pass",`<b>${a.cid}</b> ${a.title} → assessed compliant (mat ${a.maturity}/5)`);}
+   else pushFeed(next==="REMEDIATION"?"FIX":"PASS",next==="REMEDIATION"?"tag-fix":"tag-pass",
+     `<b>${a.cid}</b> ${a.title} → ${next.replace('_',' ').toLowerCase()}`);
+ } else if(roll<.78){ // reassess a risk
+   const r=Store.pick(Store.risks);const ol=r.l,oi=r.im;
+   r.l=Math.max(1,Math.min(5,r.l+Store.pick([-1,0,1])));r.im=Math.max(1,Math.min(5,r.im+Store.pick([-1,0,1])));
+   r.score=r.l*r.im;
+   if(r.l!==ol||r.im!==oi)pushFeed("RISK","tag-risk",`<b>${r.rid}</b> ${r.asset} · ${r.threat} → score <b>${r.score}</b> (L${r.l}×I${r.im})`);
+ } else { // close a finding in remediation
+   const f=Store.pick(Store.findings.filter(x=>x.state==="OPEN"||x.state==="IN_REMEDIATION"));
+   if(f){f.state=f.state==="OPEN"?"IN_REMEDIATION":"PENDING_VERIFICATION";
+     pushFeed("FIX","tag-fix",`<b>${f.fid}</b> CAPA progressed → ${f.state.replace(/_/g,' ').toLowerCase()}`);}
+ }
+ burnHist.push(View.openNC());if(burnHist.length>34)burnHist.shift();
+ renderAll();
+}
+function startSim(){if(SIM)return;SIM=setInterval(tick,Store.rnd(1100,2200));$("#feed-dot").style.background="var(--ok)"}
+function stopSim(){clearInterval(SIM);SIM=null}
+
+/* ==================== LIVE MODE (honest: halt sim, await Apps Script doGet) ==================== */
+/* GET https://script.google.com/macros/s/<DEPLOY_ID>/exec?collection=assessments&eid=ENG-0042  →  [ {assessment}, ... ] */
+function goLive(){stopSim();$("#feed-dot").style.background="var(--bad)";$("#burn-now").textContent="LIVE FEED";
+ $("#feed").innerHTML=`<div class="awaiting"><b>⚠ LIVE MODE</b>Synthetic engine halted.<br>Awaiting Apps Script <code>doGet</code> telemetry.<br>No simulated data is shown as real.<br><br>Wire: <code>?collection=assessments&eid=ENG-0042</code></div>`;}
+function goSim(){$("#burn-now").textContent="SIM";renderAll();startSim();
+ if($("#feed").querySelector(".awaiting"))$("#feed").innerHTML="";}
+
+/* ==================== TOGGLE ==================== */
+const bSim=$("#b-sim"),bLive=$("#b-live");
+bSim.onclick=()=>{if(bSim.classList.contains("on"))return;bSim.classList.add("on");bLive.classList.remove("on","live");bSim.textContent="◉ SIM";bLive.textContent="LIVE";goSim()};
+bLive.onclick=()=>{if(bLive.classList.contains("on"))return;bLive.classList.add("on","live");bSim.classList.remove("on");bSim.textContent="SIM";bLive.innerHTML='<span class="live-dot"></span>LIVE';goLive()};
+
+/* ==================== BOOT ==================== */
+renderAll();startSim();
+pushFeed("INIT","tag-fix",`Engagement <b>${Store.ENG}</b> · Meridian Bank Ltd · ISO 27001:2022 · ${Store.assessments.length} controls loaded`);
+</script>
+</body>
+</html>
 
