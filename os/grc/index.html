@@ -313,16 +313,24 @@ function renderAll(){renderPosture();renderHeat();renderSev();renderMatrix();ren
 
 /* ==================== SIM ENGINE (ghost telemetry) ==================== */
 let SIM=null;
-const TRANS={ // valid forward transitions
+const TRANS={ // steady-state machine — COMPLIANT can drift back (surveillance reality)
  NOT_STARTED:["IN_REVIEW"],IN_REVIEW:["COMPLIANT","NON_CONFORMANT"],
- NON_CONFORMANT:["REMEDIATION"],REMEDIATION:["COMPLIANT"],COMPLIANT:[]
+ NON_CONFORMANT:["REMEDIATION"],REMEDIATION:["COMPLIANT"],
+ COMPLIANT:["IN_REVIEW","NON_CONFORMANT"]   // drift / re-audit
 };
+const POST_FLOOR=68, POST_CEIL=86;          // believable oscillation band
 function tick(){
  const roll=Math.random();
  if(roll<.5){ // advance a control assessment
-   const cand=Store.applicable().filter(a=>TRANS[a.state].length);
+   let cand=Store.applicable().filter(a=>TRANS[a.state].length);
+   const post=View.posture().pct;
+   // above ceiling → only allow drift-down moves; below floor → protect compliant controls
+   if(post>=POST_CEIL) cand=cand.filter(a=>a.state!=="NON_CONFORMANT"&&a.state!=="REMEDIATION");
+   if(post<=POST_FLOOR) cand=cand.filter(a=>a.state!=="COMPLIANT");
    const a=Store.pick(cand);if(!a)return;
-   const next=Store.pick(TRANS[a.state]);const prev=a.state;a.state=next;
+   let pool=TRANS[a.state];
+   if(a.state==="COMPLIANT"&&post<=POST_FLOOR+4) pool=["IN_REVIEW"]; // don't crater from a drift
+   const next=Store.pick(pool);const prev=a.state;a.state=next;
    a.maturity=next==="COMPLIANT"?Store.rnd(4,5):next==="IN_REVIEW"?Store.rnd(2,3):next==="REMEDIATION"?Store.rnd(2,3):Store.rnd(0,2);
    if(next==="NON_CONFORMANT"){const fid="NC-"+String(Store.fseq()).padStart(3,"0");
      const sev=Store.pick(["MAJOR_NC","MINOR_NC","MINOR_NC","OBSERVATION"]);
@@ -331,6 +339,8 @@ function tick(){
    else if(next==="COMPLIANT"){const f=Store.findings.find(x=>x.aid===a.aid&&x.state!=="CLOSED");
      if(f){f.state="CLOSED";pushFeed("FIX","tag-fix",`<b>${f.fid}</b> remediated · <b>${a.cid}</b> verified compliant`);}
      else pushFeed("PASS","tag-pass",`<b>${a.cid}</b> ${a.title} → assessed compliant (mat ${a.maturity}/5)`);}
+   else if(prev==="COMPLIANT")
+     pushFeed("DRIFT","tag-risk",`<b>${a.cid}</b> ${a.title} → control drift detected · ${next.replace('_',' ').toLowerCase()}`);
    else pushFeed(next==="REMEDIATION"?"FIX":"PASS",next==="REMEDIATION"?"tag-fix":"tag-pass",
      `<b>${a.cid}</b> ${a.title} → ${next.replace('_',' ').toLowerCase()}`);
  } else if(roll<.78){ // reassess a risk
