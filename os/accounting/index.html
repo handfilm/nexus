@@ -1,1 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // ACCOUNTING</title>
+<!-- Drop at handfilm.github.io/nexus/os/accounting/ · standalone · shared Meridian/Apex/GovNet ledger ·
+     Tabs: Overview · Ledger (sortable) · Receivables · P&L · Audit Lens (ISO 27001 map). -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;--blue:#5a8dd6;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12.5px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 26px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:11px}
+.brand__hex{color:var(--gold);font-size:18px}
+.brand b{font-size:14px;letter-spacing:3px}.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.crumb{color:var(--muted);font-size:11px;letter-spacing:1.2px}.crumb b{color:var(--gold);font-weight:400}
+.bar__kpi{display:flex;gap:0}
+.k{padding:0 15px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:15px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}
+.k span{font-size:8px;letter-spacing:1.3px;color:var(--mute2);text-transform:uppercase}
+.back{border:1px solid var(--line);padding:6px 11px;font-size:10px;letter-spacing:1px;color:var(--muted);transition:.15s}.back:hover{border-color:var(--gold-edge);color:var(--gold)}
+
+/* tabs */
+.tabs{display:flex;gap:0;padding:0 26px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tab{padding:13px 18px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:.13s}
+.tab:hover{color:var(--txt)}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab .b{display:inline-block;margin-left:7px;font-size:8px;padding:1px 6px;border:1px solid var(--gold-edge);color:var(--gold);letter-spacing:1px}
+
+/* layout */
+.wrap{padding:24px 26px 60px;max-width:1340px;margin:0 auto}
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+.h1{font-size:19px;font-weight:700;letter-spacing:.6px;margin:7px 0 4px}.h1 i{color:var(--gold);font-style:normal}
+.sub{color:var(--muted);font-size:11px;max-width:64ch;margin-bottom:20px}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:16px}
+.c{background:var(--panel);padding:16px 18px}
+.c .l{font-size:8.5px;letter-spacing:1.6px;color:var(--mute2);text-transform:uppercase}
+.c .v{font-size:21px;font-weight:700;margin-top:6px;line-height:1}.c .v.ok{color:var(--ok)}.c .v.bad{color:var(--bad)}.c .v.gold{color:var(--gold)}
+.c .d{font-size:9px;margin-top:5px}.c .d.up{color:var(--ok)}.c .d.dn{color:var(--bad)}.c .d.mu{color:var(--muted)}
+
+.panel{background:var(--panel);border:1px solid var(--line);margin-bottom:16px}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c2{font-size:9px;color:var(--mute2);letter-spacing:1px}
+.split{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.bar__kpi{display:none}}
+
+/* charts */
+.cf{padding:18px 16px 12px}
+.cf svg{width:100%;height:200px;display:block;overflow:visible}
+.cf__lg{display:flex;gap:18px;margin-top:10px;font-size:9px;color:var(--muted);letter-spacing:.5px}
+.cf__lg i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:middle}
+.donut{padding:18px;display:flex;align-items:center;gap:20px}
+.donut svg{transform:rotate(-90deg);flex-shrink:0}
+.donut__lg{flex:1;font-size:10.5px}
+.donut__lg .row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--soft)}
+.donut__lg .row:last-child{border:0}
+.donut__lg .dot{width:8px;height:8px;display:inline-block;margin-right:8px}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{text-align:left;padding:9px 16px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2);cursor:pointer;user-select:none;white-space:nowrap}
+.tbl th.r{text-align:right}.tbl th:hover{color:var(--gold)}
+.tbl th .ar{color:var(--gold);font-size:8px;margin-left:4px}
+.tbl td{padding:10px 16px;border-bottom:1px solid var(--soft)}.tbl td.r{text-align:right}
+.tbl tbody tr:hover{background:var(--panel2)}
+.tbl .id{color:var(--gold)}
+.pill{display:inline-block;padding:2px 8px;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;border:1px solid}
+.pill--ok{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.pill--bad{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.pill--gold{color:var(--gold);border-color:var(--gold-edge)}
+.pill--mute{color:var(--muted);border-color:var(--line)}
+.cr{color:var(--ok)}.dr{color:var(--bad)}
+
+/* aging bars */
+.aging{padding:16px}
+.ab{display:flex;align-items:center;gap:12px;margin-bottom:11px;font-size:11px}.ab:last-child{margin:0}
+.ab .lbl{width:90px;color:var(--muted);font-size:9.5px;letter-spacing:.5px}
+.ab .track{flex:1;height:18px;background:var(--soft);position:relative}
+.ab .track i{display:block;height:100%;transition:width .5s}
+.ab .amt{width:120px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* P&L statement */
+.pnl{padding:6px 0}
+.pl{display:flex;justify-content:space-between;padding:9px 18px;font-size:12px;border-bottom:1px solid var(--soft)}
+.pl.sec{background:var(--panel2);color:var(--gold);font-size:9px;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.pl.tot{font-weight:700;border-top:1px solid var(--line);border-bottom:2px solid var(--line)}
+.pl.net{font-weight:700;font-size:14px;background:var(--gold-dim)}.pl.net .v{color:var(--gold)}
+.pl .lbl{color:var(--muted)}.pl.tot .lbl,.pl.net .lbl{color:var(--txt)}
+.pl .v{font-variant-numeric:tabular-nums}.pl .v.dr{color:var(--bad)}
+
+/* audit lens */
+.lens-note{display:flex;gap:11px;align-items:flex-start;padding:13px 16px;border:1px solid var(--gold-edge);background:var(--gold-dim);margin-bottom:16px;font-size:11px;line-height:1.6}
+.lens-note .i{color:var(--gold);font-size:15px}
+.map{width:100%;border-collapse:collapse;font-size:11.5px}
+.map th{text-align:left;padding:9px 16px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2)}
+.map td{padding:11px 16px;border-bottom:1px solid var(--soft);vertical-align:top}
+.map .cid{color:var(--gold);white-space:nowrap}
+.dot2{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div style="display:flex;align-items:center;gap:18px">
+    <a class="back" href="../hub/">‹ HUB</a>
+    <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>OS // ACCOUNTING</span></div></div>
+    <div class="crumb">NEXUS&nbsp;/&nbsp;<b>Accounting</b></div>
+  </div>
+  <div class="bar__kpi">
+    <div class="k gold"><b>৳12.4M</b><span>YTD Revenue</span></div>
+    <div class="k ok"><b>৳4.8M</b><span>Net Profit</span></div>
+    <div class="k bad"><b>৳3.15M</b><span>Receivables</span></div>
+    <div class="k"><b>৳6.2M</b><span>Cash Position</span></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <div class="tab on" data-v="ov">Overview</div>
+  <div class="tab" data-v="ledger">Ledger</div>
+  <div class="tab" data-v="ar">Receivables</div>
+  <div class="tab" data-v="pnl">P&amp;L</div>
+  <div class="tab" data-v="lens">Audit Lens <span class="b">ISO</span></div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section class="view on" id="v-ov">
+    <span class="eyebrow">Fiscal Year 2026 · BDT</span>
+    <h1 class="h1">Financial <i>Overview</i></h1>
+    <p class="sub">Consolidated position across all client engagements — Meridian Bank, GovNet, Apex RMG. Figures in Bangladeshi Taka.</p>
+    <div class="cards">
+      <div class="c"><div class="l">YTD Revenue</div><div class="v gold num">৳12.42M</div><div class="d up">▲ 18.4% vs FY25</div></div>
+      <div class="c"><div class="l">Operating Expense</div><div class="v num">৳7.61M</div><div class="d dn">▲ 9.2% vs FY25</div></div>
+      <div class="c"><div class="l">Net Profit</div><div class="v ok num">৳4.81M</div><div class="d up">▲ 38.7% margin</div></div>
+      <div class="c"><div class="l">Cash Position</div><div class="v num">৳6.20M</div><div class="d mu">3 operating accounts</div></div>
+    </div>
+    <div class="split">
+      <div class="panel">
+        <div class="panel__h"><h3>Cash Flow <i>· Revenue vs Expense</i></h3><span class="c2">monthly · ৳ lakh</span></div>
+        <div class="cf"><svg id="cf-svg" viewBox="0 0 640 200" preserveAspectRatio="none"></svg>
+          <div class="cf__lg"><span><i style="background:var(--gold)"></i>Revenue</span><span><i style="background:var(--bad)"></i>Expense</span><span><i style="background:var(--ok)"></i>Net</span></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel__h"><h3>Revenue by <i>Service</i></h3><span class="c2">FY26</span></div>
+        <div class="donut"><svg width="130" height="130" viewBox="0 0 130 130" id="donut"></svg>
+          <div class="donut__lg" id="donut-lg"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LEDGER ===================== -->
+  <section class="view" id="v-ledger">
+    <span class="eyebrow">Double-entry · general ledger</span>
+    <h1 class="h1">General <i>Ledger</i></h1>
+    <p class="sub">All posted transactions. Click any column header to sort.</p>
+    <div class="panel">
+      <div class="panel__h"><h3>Transaction <i>Journal</i></h3><span class="c2" id="led-count"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="led-tbl"><thead><tr>
+        <th data-s="date">Date</th><th data-s="ref">Ref</th><th data-s="account">Account</th>
+        <th data-s="client">Client</th><th data-s="desc">Description</th>
+        <th data-s="debit" class="r">Debit ৳</th><th data-s="credit" class="r">Credit ৳</th><th data-s="status">Status</th>
+      </tr></thead><tbody id="led-body"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===================== RECEIVABLES ===================== -->
+  <section class="view" id="v-ar">
+    <span class="eyebrow">Accounts receivable</span>
+    <h1 class="h1">Receivables <i>· Aging</i></h1>
+    <p class="sub">Outstanding client invoices bucketed by age. Overdue concentration flagged for collection.</p>
+    <div class="cards">
+      <div class="c"><div class="l">Total Outstanding</div><div class="v gold num">৳3.15M</div><div class="d mu">7 open invoices</div></div>
+      <div class="c"><div class="l">Current (0–30)</div><div class="v ok num">৳1.42M</div><div class="d mu">45% of book</div></div>
+      <div class="c"><div class="l">Overdue (60+)</div><div class="v bad num">৳0.78M</div><div class="d dn">collection risk</div></div>
+      <div class="c"><div class="l">Avg Days Outstanding</div><div class="v num">41</div><div class="d mu">DSO</div></div>
+    </div>
+    <div class="split">
+      <div class="panel"><div class="panel__h"><h3>Aging <i>Buckets</i></h3><span class="c2">৳</span></div>
+        <div class="aging" id="aging"></div></div>
+      <div class="panel"><div class="panel__h"><h3>Top <i>Debtors</i></h3><span class="c2">by balance</span></div>
+        <div style="overflow-x:auto"><table class="tbl" id="ar-tbl"><thead><tr><th>Client</th><th class="r">Balance ৳</th><th>Oldest</th></tr></thead><tbody id="ar-body"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P&L ===================== -->
+  <section class="view" id="v-pnl">
+    <span class="eyebrow">Statement · FY2026 YTD</span>
+    <h1 class="h1">Profit &amp; <i>Loss</i></h1>
+    <p class="sub">Income statement for the current fiscal year. All figures BDT.</p>
+    <div class="panel"><div class="panel__h"><h3>Income <i>Statement</i></h3><span class="c2">FY2026 · Jan–Jun</span></div>
+      <div class="pnl" id="pnl"></div></div>
+  </section>
+
+  <!-- ===================== AUDIT LENS ===================== -->
+  <section class="view" id="v-lens">
+    <span class="eyebrow">Compliance overlay</span>
+    <h1 class="h1">Audit <i>Lens</i> · ISO 27001:2022</h1>
+    <p class="sub">How this financial system maps to information-security controls — the auditor's view of your accounting stack.</p>
+    <div class="lens-note"><span class="i">⚖</span><div><b style="color:var(--gold)">This is what makes H&amp;H Nexus different.</b> Every module ships with its control map exposed — we don't just run the software, we show exactly where its data-protection obligations sit and how an ISO 27001 auditor would assess it. Financial data is the highest-sensitivity asset class; the controls below are the ones that gate it.</div></div>
+    <div class="panel"><div class="panel__h"><h3>Control <i>Coverage</i> · Financial Data Assets</h3><span class="c2" id="lens-c"></span></div>
+      <div style="overflow-x:auto"><table class="map"><thead><tr><th>Control</th><th>Title</th><th>Relevance to Accounting</th><th>Status</th></tr></thead><tbody id="lens-body"></tbody></table></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>"৳"+Math.abs(n).toLocaleString("en-IN");
+
+/* ---------- tabs ---------- */
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{
+  $$(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+  $$(".view").forEach(v=>v.classList.remove("on"));$("#v-"+t.dataset.v).classList.add("on");
+}));
+
+/* ====================== DATA (shared fictional enterprise) ====================== */
+const CF=[ // [month, revenue, expense] in ৳ lakh
+ ["Jan",18.2,11.4],["Feb",16.8,12.1],["Mar",22.4,13.8],["Apr",19.6,12.9],["May",24.1,13.2],["Jun",23.1,12.7]
+];
+const REVSERVICE=[ // service line, ৳ lakh, color
+ ["Full Audit & Certification",54,"#d4af37"],["Digital Transformation Audit",31,"#5a8dd6"],
+ ["Surveillance Audit",22,"#5fb87a"],["Gap Assessment",11,"#e08a3d"],["Compliance Consulting",6,"#7a7a7a"]
+];
+const LEDGER=[
+ ["2026-06-12","JV-0312","Revenue · Audit Fees","Meridian Bank","On-Site Audit milestone 3/5",800000,0,"POSTED"],
+ ["2026-06-11","JV-0311","Accounts Receivable","GovNet","Cloud/API assessment invoice",600000,0,"POSTED"],
+ ["2026-06-10","JV-0310","Operating Expense · Payroll","—","June engineer payroll",0,420000,"POSTED"],
+ ["2026-06-09","JV-0309","Bank · Operating","Apex RMG","Surveillance H1 receipt",0,200000,"POSTED"],
+ ["2026-06-08","JV-0308","Revenue · Audit Fees","Apex RMG","Surveillance audit H1",200000,0,"POSTED"],
+ ["2026-06-06","JV-0307","Operating Expense · Tools","—","Vuln scanner license Q2",0,68000,"POSTED"],
+ ["2026-06-05","JV-0306","Accounts Receivable","Meridian Bank","Milestone 3 invoice issued",800000,0,"PENDING"],
+ ["2026-06-03","JV-0305","Operating Expense · Travel","GovNet","On-site audit travel Dhaka",0,34000,"POSTED"],
+ ["2026-06-01","JV-0304","Revenue · Consulting","Horizon MF","Pre-audit advisory",150000,0,"POSTED"],
+ ["2026-05-28","JV-0303","Bank · Operating","GovNet","Milestone 1 receipt",0,600000,"POSTED"],
+ ["2026-05-25","JV-0302","Operating Expense · Payroll","—","May engineer payroll",0,415000,"POSTED"],
+ ["2026-05-22","JV-0301","Revenue · Audit Fees","GovNet","Digital transformation MS-1",600000,0,"POSTED"]
+];
+const AGING=[ // bucket, amount, color
+ ["0–30 days",1420000,"#5fb87a"],["31–60 days",950000,"#d4af37"],["61–90 days",530000,"#e08a3d"],["90+ days",250000,"#e0533d"]
+];
+const DEBTORS=[
+ ["Meridian Bank Ltd",800000,"2026-06-05"],["GovNet Data Authority",1200000,"2026-04-18"],
+ ["Apex RMG Exports",400000,"2026-05-15"],["Horizon Microfinance",750000,"2026-03-30"]
+];
+const PNL=[
+ ["sec","REVENUE",""],["row","Audit & Certification fees",5400000],["row","Consulting & advisory",1100000],
+ ["row","Surveillance & renewals",2200000],["tot","Total Revenue",8700000],
+ ["sec","OPERATING EXPENSES",""],["row","Salaries & engineer payroll",-3650000,"dr"],["row","Tools & licenses",-410000,"dr"],
+ ["row","Travel & on-site",-280000,"dr"],["row","Office & admin",-520000,"dr"],["tot","Total OpEx",-4860000,"dr"],
+ ["net","Net Profit (YTD)",3840000]
+];
+const LENS=[
+ ["A.5.12","Classification of information","Financial records classified as RESTRICTED — highest sensitivity tier","COMPLIANT","#5fb87a"],
+ ["A.8.5","Secure authentication","MFA enforced on all ledger / banking access","COMPLIANT","#5fb87a"],
+ ["A.8.15","Logging","All journal postings write immutable audit-trail entries","COMPLIANT","#5fb87a"],
+ ["A.8.24","Use of cryptography","Banking data encrypted at rest & in transit","IN REVIEW","#d4af37"],
+ ["A.5.15","Access control","Segregation of duties: poster ≠ approver on invoices","COMPLIANT","#5fb87a"],
+ ["A.8.12","Data leakage prevention","Export controls on financial reports — DLP gap on email","NON-CONFORMANT","#e0533d"],
+ ["A.8.13","Information backup","Daily encrypted ledger backup to offsite store","COMPLIANT","#5fb87a"]
+];
+
+/* ====================== RENDER ====================== */
+/* cash-flow line chart */
+(function(){const W=640,H=200,pad=8;const allV=CF.flatMap(r=>[r[1],r[2]]);const max=Math.max(...allV)*1.1;
+ const x=i=>pad+i*((W-2*pad)/(CF.length-1));const y=v=>H-pad-(v/max)*(H-2*pad);
+ const line=(idx,col,w)=>{const pts=CF.map((r,i)=>`${x(i)},${y(r[idx])}`).join(" ");
+   return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${w}"/>`+
+     CF.map((r,i)=>`<circle cx="${x(i)}" cy="${y(r[idx])}" r="2.4" fill="${col}"/>`).join("");};
+ const net=CF.map((r,i)=>`${x(i)},${y(r[1]-r[2])}`).join(" ");
+ let g="";for(let k=0;k<=4;k++){const gy=pad+k*((H-2*pad)/4);g+=`<line x1="${pad}" y1="${gy}" x2="${W-pad}" y2="${gy}" stroke="#1b1b1b" stroke-width="1"/>`;}
+ const lbl=CF.map((r,i)=>`<text x="${x(i)}" y="${H-1}" fill="#555" font-size="8" text-anchor="middle" font-family="monospace">${r[0]}</text>`).join("");
+ $("#cf-svg").innerHTML=g+`<polyline points="${net}" fill="none" stroke="#5fb87a" stroke-width="1.2" stroke-dasharray="3 2" opacity=".7"/>`+line(2,"#e0533d",1.4)+line(1,"#d4af37",1.8)+lbl;
+})();
+
+/* donut */
+(function(){const tot=REVSERVICE.reduce((s,r)=>s+r[1],0);let off=0;const r=46,C=2*Math.PI*r;let g="";
+ REVSERVICE.forEach(([n,v,col])=>{const frac=v/tot;const len=frac*C;
+   g+=`<circle cx="65" cy="65" r="${r}" fill="none" stroke="${col}" stroke-width="15" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}"/>`;off+=len;});
+ $("#donut").innerHTML=g+`<circle cx="65" cy="65" r="38" fill="none"/>`;
+ $("#donut-lg").innerHTML=REVSERVICE.map(([n,v,col])=>`<div class="row"><span><span class="dot" style="background:${col}"></span>${n}</span><b class="num">${Math.round(v/tot*100)}%</b></div>`).join("");
+})();
+
+/* ledger (sortable) */
+let ledData=LEDGER.map(r=>({date:r[0],ref:r[1],account:r[2],client:r[3],desc:r[4],debit:r[5],credit:r[6],status:r[7]}));
+let sortK="date",sortDir=-1;
+function renderLed(){
+ ledData.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(typeof x==="string"){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-sortDir:x>y?sortDir:0;});
+ $("#led-count").textContent=ledData.length+" entries · ৳"+(ledData.reduce((s,r)=>s+r.debit,0)).toLocaleString("en-IN")+" debit";
+ $("#led-body").innerHTML=ledData.map(r=>`<tr>
+   <td class="num">${r.date}</td><td class="id">${r.ref}</td><td>${r.account}</td>
+   <td style="color:var(--muted)">${r.client}</td><td style="color:var(--muted)">${r.desc}</td>
+   <td class="r num ${r.debit?'dr':''}">${r.debit?fmt(r.debit):'—'}</td>
+   <td class="r num ${r.credit?'cr':''}">${r.credit?fmt(r.credit):'—'}</td>
+   <td><span class="pill pill--${r.status==='POSTED'?'ok':'gold'}">${r.status}</span></td></tr>`).join("");
+ $$("#led-tbl th").forEach(th=>{th.querySelector(".ar")?.remove();
+   if(th.dataset.s===sortK){const s=document.createElement("span");s.className="ar";s.textContent=sortDir>0?"▲":"▼";th.appendChild(s);}});
+}
+$$("#led-tbl th").forEach(th=>th.addEventListener("click",()=>{
+ if(sortK===th.dataset.s)sortDir*=-1;else{sortK=th.dataset.s;sortDir=1;}renderLed();}));
+renderLed();
+
+/* aging + debtors */
+(function(){const max=Math.max(...AGING.map(a=>a[1]));
+ $("#aging").innerHTML=AGING.map(([l,v,c])=>`<div class="ab"><span class="lbl">${l}</span>
+   <div class="track"><i style="width:${v/max*100}%;background:${c}"></i></div><span class="amt">${fmt(v)}</span></div>`).join("");
+ $("#ar-body").innerHTML=DEBTORS.sort((a,b)=>b[1]-a[1]).map(([n,v,d])=>`<tr><td>${n}</td><td class="r num">${fmt(v)}</td><td class="num" style="color:var(--muted)">${d}</td></tr>`).join("");
+})();
+
+/* P&L */
+$("#pnl").innerHTML=PNL.map(r=>{
+ if(r[0]==="sec")return `<div class="pl sec"><span>${r[1]}</span></div>`;
+ const cls=r[0]==="net"?"net":r[0]==="tot"?"tot":"";const dr=r[3]==="dr"?"dr":"";
+ return `<div class="pl ${cls}"><span class="lbl">${r[1]}</span><span class="v ${dr} num">${r[2]<0?'(':''}${fmt(r[2])}${r[2]<0?')':''}</span></div>`;
+}).join("");
+
+/* audit lens */
+$("#lens-c").textContent=LENS.length+" controls mapped";
+$("#lens-body").innerHTML=LENS.map(([id,t,rel,st,col])=>`<tr>
+ <td class="cid">${id}</td><td>${t}</td><td style="color:var(--muted)">${rel}</td>
+ <td><span class="dot2" style="background:${col}"></span><span class="st" style="color:${col}">${st}</span></td></tr>`).join("");
+</script>
+</body>
+</html>
 
