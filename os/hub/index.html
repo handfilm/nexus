@@ -1,1 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H&H NEXUS // APP HUB</title>
+<!-- Drop at handfilm.github.io/nexus/os/hub/  ·  links out to ../grc/ , ../ (ERP shell) , etc.
+     Online cards navigate; provisioning cards toast. ⌘K / Ctrl+K = command palette. -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh;
+  background-image:linear-gradient(rgba(212,175,55,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,.022) 1px,transparent 1px);background-size:42px 42px}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+/* ---- top bar ---- */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 28px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.82);backdrop-filter:blur(7px);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:12px}
+.brand__hex{color:var(--gold);font-size:20px;animation:spin 18s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand b{font-size:16px;letter-spacing:4px;font-weight:700}
+.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2.5px;margin-top:2px}
+.bar__tenant{color:var(--muted);font-size:10px;letter-spacing:.6px}
+.bar__tenant b{color:var(--gold);font-weight:400}
+.bar__right{display:flex;align-items:center;gap:16px}
+.cmdk{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:7px 12px;color:var(--mute2);font-size:10px;letter-spacing:1px;cursor:pointer;transition:.15s}
+.cmdk:hover{border-color:var(--gold-edge);color:var(--gold)}
+.cmdk kbd{background:var(--raise);border:1px solid var(--line);padding:1px 6px;font-family:inherit;font-size:9px;color:var(--muted)}
+.clock{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:1px}
+.sysok{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:1.5px;color:var(--ok);text-transform:uppercase}
+.sysok i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ---- KPI strip ---- */
+.kstrip{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line)}
+.kc{padding:16px 24px;border-left:1px solid var(--line)}.kc:first-child{border-left:0}
+.kc .l{font-size:8.5px;letter-spacing:1.6px;color:var(--mute2);text-transform:uppercase}
+.kc .v{font-size:23px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1}
+.kc .v.gold{color:var(--gold)}.kc .v.ok{color:var(--ok)}.kc .v.bad{color:var(--bad)}
+.kc .d{font-size:9px;color:var(--muted);margin-top:4px}
+
+/* ---- sections ---- */
+.wrap{padding:30px 28px 60px;max-width:1320px;margin:0 auto}
+.sec{margin-bottom:38px}
+.sec__h{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+.sec__h h2{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+.sec__h .rule{flex:1;height:1px;background:var(--line)}
+.sec__h .ct{font-size:9px;color:var(--mute2);letter-spacing:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+
+/* ---- app card ---- */
+.card{background:var(--panel);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:0;position:relative;transition:.16s;overflow:hidden;min-height:172px}
+.card.online{cursor:pointer}
+.card.online:hover{border-color:var(--gold-edge);background:var(--panel2);transform:translateY(-2px)}
+.card.online::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold);transform:scaleY(0);transform-origin:top;transition:.2s}
+.card.online:hover::before{transform:scaleY(1)}
+.card.prov{opacity:.5;cursor:not-allowed}
+.card__top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.card__ico{font-size:20px;color:var(--gold);width:40px;height:40px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.card.prov .card__ico{color:var(--muted)}
+.card__st{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;gap:5px;padding-top:3px}
+.card__st.online{color:var(--ok)}.card__st.prov{color:var(--mute2)}
+.card__st i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.card__st.online i{animation:pulse 1.8s infinite}
+.card h3{font-size:15px;font-weight:700;letter-spacing:.5px}
+.card p{color:var(--muted);font-size:10.5px;margin-top:5px;line-height:1.45;flex:1}
+.card__metric{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid var(--soft)}
+.card__metric .m{font-size:10px;color:var(--txt);letter-spacing:.4px}
+.card__metric .m b{color:var(--gold);font-variant-numeric:tabular-nums}
+.card__spark{width:72px;height:24px}
+.card__cta{position:absolute;right:18px;bottom:16px;font-size:9px;letter-spacing:2px;color:var(--gold);opacity:0;transform:translateX(-6px);transition:.18s;text-transform:uppercase}
+.card.online:hover .card__cta{opacity:1;transform:none}
+.card.online:hover .card__metric .m{opacity:.35}
+
+/* ---- labs footer ---- */
+.labs{border-top:1px dashed var(--line);margin-top:20px;padding-top:22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.labs__l{font-size:9px;letter-spacing:2px;color:var(--mute2);text-transform:uppercase}
+.labs a{display:flex;align-items:center;gap:9px;border:1px solid var(--line);padding:9px 15px;color:var(--muted);font-size:10px;letter-spacing:1px;transition:.15s}
+.labs a:hover{border-color:var(--gold-edge);color:var(--gold)}
+.foot{margin-top:30px;text-align:center;color:var(--mute2);font-size:9px;letter-spacing:1.5px}
+
+/* ---- command palette ---- */
+.pal-mask{position:fixed;inset:0;background:rgba(0,0,0,.72);opacity:0;visibility:hidden;transition:.15s;z-index:40;backdrop-filter:blur(2px)}
+.pal-mask.open{opacity:1;visibility:visible}
+.pal{position:fixed;top:14vh;left:50%;transform:translateX(-50%) translateY(-10px);width:560px;max-width:92vw;background:var(--panel2);border:1px solid var(--gold-edge);z-index:41;opacity:0;visibility:hidden;transition:.16s}
+.pal.open{opacity:1;visibility:visible;transform:translateX(-50%)}
+.pal__in{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.pal__in span{color:var(--gold);font-size:14px}
+.pal__in input{flex:1;background:transparent;border:0;outline:0;color:var(--txt);font-family:var(--mono);font-size:14px;letter-spacing:.5px}
+.pal__in input::placeholder{color:var(--mute2)}
+.pal__list{max-height:50vh;overflow-y:auto}
+.pal__i{display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid var(--soft);cursor:pointer}
+.pal__i.sel,.pal__i:hover{background:var(--gold-dim)}
+.pal__i .pi{font-size:15px;color:var(--gold);width:24px;text-align:center}
+.pal__i .pt{flex:1}.pal__i .pt b{font-size:12px}.pal__i .pt span{display:block;font-size:9.5px;color:var(--muted);margin-top:1px}
+.pal__i .ps{font-size:8px;letter-spacing:1px;text-transform:uppercase}
+.pal__i .ps.online{color:var(--ok)}.pal__i .ps.prov{color:var(--mute2)}
+.pal__none{padding:24px;text-align:center;color:var(--mute2);font-size:11px;letter-spacing:1px}
+
+/* ---- toast ---- */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:9px;z-index:60}
+.toast{background:var(--panel2);border:1px solid var(--gold-edge);border-left-width:3px;padding:12px 17px;font-size:11px;letter-spacing:.4px;min-width:280px;animation:slin .2s ease}
+.toast b{display:block;color:var(--gold);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+@keyframes slin{from{transform:translateX(18px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:780px){.kstrip{grid-template-columns:repeat(2,1fr)}.bar__tenant,.clock{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>APP HUB</span></div></div>
+  <div class="bar__tenant">TENANT&nbsp; <b>H&amp;H Nexus</b> &nbsp;·&nbsp; 3 client orgs &nbsp;·&nbsp; Meridian / Apex / GovNet</div>
+  <div class="bar__right">
+    <div class="cmdk" id="cmdk-btn"><span>⌘</span> Search apps <kbd>⌘K</kbd></div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="sysok"><i></i> All systems nominal</div>
+  </div>
+</header>
+
+<div class="kstrip">
+  <div class="kc"><div class="l">Active Modules</div><div class="v gold" id="k-mod">3</div><div class="d">of 10 provisioned</div></div>
+  <div class="kc"><div class="l">Compliance Posture</div><div class="v ok" id="k-post">72%</div><div class="d">ENG-0042 · Meridian</div></div>
+  <div class="kc"><div class="l">Open Findings</div><div class="v bad" id="k-find">6</div><div class="d">across all engagements</div></div>
+  <div class="kc"><div class="l">Pipeline Value</div><div class="v" id="k-pipe">৳3.4M</div><div class="d">3 live contracts</div></div>
+  <div class="kc"><div class="l">Events / 24h</div><div class="v" id="k-evt">14,802</div><div class="d">telemetry ingested</div></div>
+</div>
+
+<div class="wrap">
+
+  <section class="sec">
+    <div class="sec__h"><h2>Security &amp; GRC</h2><div class="rule"></div><span class="ct">1 online · 3 provisioning</span></div>
+    <div class="grid">
+      <a class="card online" href="../grc/" data-name="GRC Command" data-desc="ISO 27001 compliance + cyber posture" data-st="online" data-ico="⚙">
+        <div class="card__top"><span class="card__ico">⚙</span><span class="card__st online"><i></i> Online</span></div>
+        <h3>GRC Command</h3><p>ISO 27001:2022 compliance tracker, risk matrix &amp; live cyber telemetry.</p>
+        <div class="card__metric"><span class="m">Posture <b>72%</b> · <b>6</b> NCs</span><svg class="card__spark" viewBox="0 0 72 24" data-spark="6,8,7,11,9,12,10,14,13,15,17"></svg></div>
+        <div class="card__cta">Launch →</div>
+      </a>
+      <div class="card prov" data-name="Vendor Risk" data-desc="Third-party / supply-chain assessment" data-st="prov" data-ico="◈">
+        <div class="card__top"><span class="card__ico">◈</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>Vendor Risk</h3><p>Third-party security posture, contract compliance, supply-chain risk scoring.</p>
+        <div class="card__metric"><span class="m">Module scaffold queued</span></div>
+      </div>
+      <div class="card prov" data-name="Pen-Test Tracker" data-desc="Offensive engagement management" data-st="prov" data-ico="⌖">
+        <div class="card__top"><span class="card__ico">⌖</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>Pen-Test Tracker</h3><p>Penetration testing scope, exploit findings, CVSS scoring &amp; retest workflow.</p>
+        <div class="card__metric"><span class="m">Module scaffold queued</span></div>
+      </div>
+      <div class="card prov" data-name="Incident Response" data-desc="SOC incident lifecycle" data-st="prov" data-ico="◉">
+        <div class="card__top"><span class="card__ico">◉</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>Incident Response</h3><p>SOC alert triage, incident timeline, containment status &amp; post-mortem log.</p>
+        <div class="card__metric"><span class="m">Module scaffold queued</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec__h"><h2>Business Operations</h2><div class="rule"></div><span class="ct">2 online · 2 provisioning</span></div>
+    <div class="grid">
+      <a class="card online" href="../" data-name="ERP Shell" data-desc="Decoupled enterprise resource OS" data-st="online" data-ico="▤">
+        <div class="card__top"><span class="card__ico">▤</span><span class="card__st online"><i></i> Online</span></div>
+        <h3>ERP Shell</h3><p>Contracts, billing, service delivery, renewals &amp; project monitoring — 9-vertical core.</p>
+        <div class="card__metric"><span class="m"><b>3</b> contracts · <b>৳3.4M</b></span><svg class="card__spark" viewBox="0 0 72 24" data-spark="9,10,9,12,11,13,12,12,14,15,16"></svg></div>
+        <div class="card__cta">Launch →</div>
+      </a>
+      <a class="card online" href="../#/crm" data-name="CRM" data-desc="Enterprise client relationships" data-st="online" data-ico="◈">
+        <div class="card__top"><span class="card__ico">◈</span><span class="card__st online"><i></i> Online</span></div>
+        <h3>CRM</h3><p>Client ledger, pipeline, LTV &amp; secure profile flyout across banking, fintech &amp; gov.</p>
+        <div class="card__metric"><span class="m"><b>6</b> accounts · <b>1</b> lead</span><svg class="card__spark" viewBox="0 0 72 24" data-spark="4,5,5,6,6,6,7,7,8,8,9"></svg></div>
+        <div class="card__cta">Launch →</div>
+      </a>
+      <div class="card prov" data-name="Accounting" data-desc="Ledger, AR/AP, cash-flow" data-st="prov" data-ico="৳">
+        <div class="card__top"><span class="card__ico">৳</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>Accounting</h3><p>General ledger, AR aging, AP, cash-flow forecast &amp; P&amp;L statements.</p>
+        <div class="card__metric"><span class="m">Next in build queue</span></div>
+      </div>
+      <div class="card prov" data-name="Inventory &amp; Procurement" data-desc="Stock, suppliers, purchase orders" data-st="prov" data-ico="▦">
+        <div class="card__top"><span class="card__ico">▦</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>Inventory &amp; Procurement</h3><p>Stock levels, supplier management, PO lifecycle &amp; reorder automation.</p>
+        <div class="card__metric"><span class="m">Module scaffold queued</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec__h"><h2>Industry Verticals</h2><div class="rule"></div><span class="ct">audit-lens enabled</span></div>
+    <div class="grid">
+      <div class="card prov" data-name="HIS — Hospital Information System" data-desc="Patient-data-protected clinical ops" data-st="prov" data-ico="✚">
+        <div class="card__top"><span class="card__ico">✚</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>HIS</h3><p>Bed availability, patient flow &amp; clinical ops — with a patient-data-protection audit layer.</p>
+        <div class="card__metric"><span class="m">Vertical demo queued</span></div>
+      </div>
+      <div class="card prov" data-name="FinTech Core" data-desc="PCI-DSS payments backbone" data-st="prov" data-ico="◆">
+        <div class="card__top"><span class="card__ico">◆</span><span class="card__st prov"><i></i> Provisioning</span></div>
+        <h3>FinTech Core</h3><p>Transaction ledger, fraud signals &amp; settlement — with a PCI-DSS compliance overlay.</p>
+        <div class="card__metric"><span class="m">Vertical demo queued</span></div>
+      </div>
+    </div>
+
+    <div class="labs">
+      <span class="labs__l">Creator division · separate brand</span>
+      <a href="#" id="labs-link">RAWx Labs — AI &amp; media pipelines ↗</a>
+    </div>
+  </section>
+
+  <div class="foot">H&amp;H NEXUS APP HUB · v0.1.0 · ghost architecture · handfilm.github.io/nexus/os/hub</div>
+</div>
+
+<!-- command palette -->
+<div class="pal-mask" id="pal-mask"></div>
+<div class="pal" id="pal">
+  <div class="pal__in"><span>⌘</span><input id="pal-input" placeholder="Jump to an app…" autocomplete="off"></div>
+  <div class="pal__list" id="pal-list"></div>
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+
+/* clock */
+setInterval(()=>{$("#clock").textContent=new Date().toLocaleTimeString('en-GB')+" UTC+6";},1000);
+
+/* sparklines */
+$$("[data-spark]").forEach(svg=>{
+  const v=svg.dataset.spark.split(",").map(Number),max=Math.max(...v),min=Math.min(...v),n=v.length;
+  const pts=v.map((y,i)=>`${(i/(n-1))*72},${22-((y-min)/(max-min||1))*20-1}`).join(" ");
+  svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="#d4af37" stroke-width="1.3" opacity=".85"/>
+    <circle cx="72" cy="${22-((v[n-1]-min)/(max-min||1))*20-1}" r="1.7" fill="#d4af37"/>`;
+});
+
+/* ambient live KPI jitter (alive, subtle) */
+let evt=14802;
+setInterval(()=>{evt+=Math.floor(Math.random()*7);$("#k-evt").textContent=evt.toLocaleString();},1700);
+
+/* toast */
+function toast(t,m){const e=document.createElement("div");e.className="toast";e.innerHTML=`<b>${t}</b>${m}`;
+  $("#toast-wrap").appendChild(e);setTimeout(()=>{e.style.transition="opacity .3s";e.style.opacity="0";setTimeout(()=>e.remove(),300);},3400);}
+
+/* provisioning cards → toast */
+$$(".card.prov").forEach(c=>c.addEventListener("click",()=>toast("Provisioning",c.dataset.name+" module is scaffolding. Ships next.")));
+$("#labs-link").addEventListener("click",e=>{e.preventDefault();toast("RAWx Labs","Creator division — kept separate from the enterprise hub by design.");});
+
+/* ---- command palette ---- */
+const APPS=$$(".card").map(c=>({name:c.dataset.name,desc:c.dataset.desc,st:c.dataset.st,ico:c.dataset.ico,
+  href:c.classList.contains("online")?c.getAttribute("href"):null}));
+let palSel=0,palShown=[];
+function openPal(){$("#pal").classList.add("open");$("#pal-mask").classList.add("open");$("#pal-input").value="";renderPal("");setTimeout(()=>$("#pal-input").focus(),40);}
+function closePal(){$("#pal").classList.remove("open");$("#pal-mask").classList.remove("open");}
+function renderPal(q){
+  palShown=APPS.filter(a=>(a.name+a.desc).toLowerCase().includes(q.toLowerCase()));palSel=0;
+  const L=$("#pal-list");
+  if(!palShown.length){L.innerHTML=`<div class="pal__none">No module matches “${q}”.</div>`;return;}
+  L.innerHTML=palShown.map((a,i)=>`<div class="pal__i ${i===0?'sel':''}" data-i="${i}">
+    <span class="pi">${a.ico}</span><div class="pt"><b>${a.name}</b><span>${a.desc}</span></div>
+    <span class="ps ${a.st}">${a.st==='online'?'online':'soon'}</span></div>`).join("");
+  $$(".pal__i").forEach(el=>{el.addEventListener("click",()=>launch(+el.dataset.i));
+    el.addEventListener("mouseenter",()=>{palSel=+el.dataset.i;markSel();});});
+}
+function markSel(){$$(".pal__i").forEach((el,i)=>el.classList.toggle("sel",i===palSel));}
+function launch(i){const a=palShown[i];if(!a)return;if(a.href){location.href=a.href;}else{closePal();toast("Provisioning",a.name+" ships next.");}}
+$("#pal-input").addEventListener("input",e=>renderPal(e.target.value));
+$("#pal-input").addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"){e.preventDefault();palSel=Math.min(palSel+1,palShown.length-1);markSel();$$(".pal__i")[palSel]?.scrollIntoView({block:"nearest"});}
+  else if(e.key==="ArrowUp"){e.preventDefault();palSel=Math.max(palSel-1,0);markSel();$$(".pal__i")[palSel]?.scrollIntoView({block:"nearest"});}
+  else if(e.key==="Enter"){e.preventDefault();launch(palSel);}
+  else if(e.key==="Escape"){closePal();}
+});
+$("#cmdk-btn").addEventListener("click",openPal);
+$("#pal-mask").addEventListener("click",closePal);
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#pal").classList.contains("open")?closePal():openPal();}
+});
+</script>
+</body>
+</html>
