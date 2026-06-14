@@ -1,1 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // VENDOR RISK</title>
+<!-- Third-Party Risk Management · Drop at handfilm.github.io/nexus/os/vendor/ · standalone ·
+     Vendor register (sortable + flyout) · risk tiers · assessment pipeline · ISO A.5.19–A.5.23 coverage · live monitoring feed -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;--crit:#e0533d;--high:#e08a3d;--med:#d4af37;--low:#5fb87a;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --flyout-w:430px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-variant-numeric:tabular-nums}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.bar__l{display:flex;align-items:center;gap:18px}
+.back{border:1px solid var(--line);padding:6px 11px;font-size:10px;letter-spacing:1px;color:var(--muted);transition:.15s}.back:hover{border-color:var(--gold-edge);color:var(--gold)}
+.brand{display:flex;align-items:center;gap:11px}.brand__hex{color:var(--gold);font-size:18px}
+.brand b{font-size:14px;letter-spacing:3px}.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.bar__kpi{display:flex;gap:0}
+.k{padding:0 15px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:16px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}
+.k span{font-size:8px;letter-spacing:1.3px;color:var(--mute2);text-transform:uppercase}
+.mon{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:1.4px;color:var(--ok);text-transform:uppercase}
+.mon i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.head{padding:20px 24px 4px}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+.h1{font-size:19px;font-weight:700;letter-spacing:.6px;margin:7px 0 4px}.h1 i{color:var(--gold);font-style:normal}
+.sub{color:var(--muted);font-size:11px;max-width:70ch}
+
+.wrap{padding:14px 24px 60px;display:grid;grid-template-columns:270px 1fr 320px;gap:14px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line)}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c2{font-size:9px;color:var(--mute2);letter-spacing:1px}
+
+/* donut */
+.donut{padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.donut svg{transform:rotate(-90deg)}
+.donut__lg{width:100%;font-size:10.5px}
+.donut__lg .row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--soft)}
+.donut__lg .row:last-child{border:0}
+.donut__lg .dot{width:8px;height:8px;display:inline-block;margin-right:8px}
+
+/* status bars */
+.bars{padding:14px}
+.b1{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:11px}.b1:last-child{margin:0}
+.b1 .lbl{width:78px;color:var(--muted);font-size:9px;letter-spacing:.5px;text-transform:uppercase}
+.b1 .track{flex:1;height:14px;background:var(--soft)}.b1 .track i{display:block;height:100%;transition:width .4s}
+.b1 .v{width:22px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* vendor table */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{text-align:left;padding:9px 14px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2);cursor:pointer;user-select:none;white-space:nowrap}
+.tbl th.r{text-align:right}.tbl th:hover{color:var(--gold)}.tbl th .ar{color:var(--gold);font-size:8px;margin-left:3px}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--soft)}.tbl td.r{text-align:right}
+.tbl tbody tr{cursor:pointer}.tbl tbody tr:hover{background:var(--panel2)}.tbl tbody tr:hover .vn{color:var(--gold)}
+.vn{color:var(--txt)}
+.score{font-weight:700;font-variant-numeric:tabular-nums}
+.tier{display:inline-block;padding:2px 7px;font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid}
+.pill{display:inline-block;padding:2px 7px;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;border:1px solid}
+.pill--ok{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.pill--bad{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.pill--gold{color:var(--gold);border-color:var(--gold-edge)}
+.pill--mute{color:var(--muted);border-color:var(--line)}
+
+/* concentration callout */
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1px solid rgba(224,83,61,.4);background:rgba(224,83,61,.08)}
+.alert .i{color:var(--bad);font-size:16px}
+.alert b{color:var(--bad)}
+.alert p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:3px}
+
+/* control coverage */
+.cov{padding:6px 0}
+.cv{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid var(--soft)}.cv:last-child{border:0}
+.cv__l .id{color:var(--gold);font-size:10px}.cv__l .t{color:var(--muted);font-size:9.5px;margin-top:2px}
+.cv__r{text-align:right;white-space:nowrap}
+.cv__r .frac{font-size:11px;font-variant-numeric:tabular-nums}
+.cv__r .st{font-size:7.5px;letter-spacing:1px;text-transform:uppercase}
+
+/* monitoring feed */
+.feed{max-height:520px;overflow-y:auto}
+.fe{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--soft);animation:fin .25s ease}
+@keyframes fin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.fe__t{color:var(--mute2);font-size:8.5px;white-space:nowrap;padding-top:1px;font-variant-numeric:tabular-nums}
+.fe__b{flex:1;font-size:10.5px;line-height:1.45}.fe__b b{color:var(--gold)}
+.fe__tag{font-size:7.5px;letter-spacing:1px;padding:1px 5px;border:1px solid;text-transform:uppercase;margin-right:6px}
+.t-cve{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.t-ok{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.t-info{color:var(--gold);border-color:var(--gold-edge)}
+
+/* flyout */
+.fly-mask{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;visibility:hidden;transition:.18s;z-index:40}
+.fly-mask.open{opacity:1;visibility:visible}
+.fly{position:fixed;top:0;right:0;height:100vh;width:var(--flyout-w);max-width:92vw;background:var(--panel);border-left:1px solid var(--gold-edge);transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.1,1);z-index:41;display:flex;flex-direction:column}
+.fly.open{transform:none}
+.fly__h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between}
+.fly__h h2{font-size:16px;font-weight:700;margin-top:4px}
+.fly__h .x{background:none;border:1px solid var(--line);color:var(--muted);width:28px;height:28px;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit}.fly__h .x:hover{border-color:var(--bad);color:var(--bad)}
+.fly__b{padding:20px;overflow-y:auto;flex:1}
+.scorebig{display:flex;align-items:baseline;gap:10px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.scorebig b{font-size:42px;font-weight:700;line-height:1}.scorebig span{font-size:9px;letter-spacing:1.5px;color:var(--mute2);text-transform:uppercase}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:10px 14px;font-size:11.5px;margin-bottom:22px}
+.kv dt{color:var(--mute2);font-size:9px;letter-spacing:1.3px;text-transform:uppercase;padding-top:2px}
+.fly__b h4{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.ctrls{display:flex;flex-wrap:wrap;gap:6px}
+.ctag{font-size:9px;border:1px solid var(--line);padding:3px 8px;color:var(--muted)}
+.ctag.gap{border-color:rgba(224,83,61,.4);color:var(--bad)}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}.bar__kpi{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__l">
+    <a class="back" href="../hub/">‹ HUB</a>
+    <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>OS // VENDOR RISK</span></div></div>
+  </div>
+  <div class="bar__kpi">
+    <div class="k"><b id="kp-v">12</b><span>Vendors</span></div>
+    <div class="k gold"><b id="kp-avg">55</b><span>Avg Risk</span></div>
+    <div class="k bad"><b id="kp-hi">4</b><span>High+ Risk</span></div>
+    <div class="k bad"><b>2</b><span>Overdue</span></div>
+    <div class="k ok"><b>67%</b><span>Contract OK</span></div>
+  </div>
+  <div class="mon"><i></i> Continuous monitoring</div>
+</header>
+
+<div class="head">
+  <span class="eyebrow">Third-party risk management · TPRM</span>
+  <h1 class="h1">Vendor <i>Risk</i> Register</h1>
+  <p class="sub">Supply-chain &amp; third-party security posture for the H&amp;H Nexus estate. Risk scored 0–100 (higher = riskier), mapped to ISO 27001:2022 supplier controls A.5.19–A.5.23. Click any vendor for the full assessment profile.</p>
+</div>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3>Risk by <i>Tier</i></h3><span class="c2">12 vendors</span></div>
+      <div class="donut"><svg width="120" height="120" viewBox="0 0 120 120" id="donut"></svg><div class="donut__lg" id="donut-lg"></div></div></div>
+    <div class="panel"><div class="panel__h"><h3>Assessment <i>Status</i></h3></div><div class="bars" id="bars"></div></div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3>Vendor <i>Register</i></h3><span class="c2" id="reg-c"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="tbl"><thead><tr>
+        <th data-s="name">Vendor</th><th data-s="category">Category</th>
+        <th data-s="score" class="r">Risk</th><th data-s="tier">Tier</th>
+        <th data-s="assess">Assessment</th><th data-s="contract">Contract</th>
+      </tr></thead><tbody id="body"></tbody></table></div>
+    </div>
+    <div class="alert"><span class="i">⚠</span><div><b>SUPPLY-CHAIN CONCENTRATION RISK</b>
+      <p>2 critical-tier vendors — <b style="color:var(--txt)">DataVault Cloud</b> &amp; <b style="color:var(--txt)">FinWire Settlement</b> — both carry overdue assessments and contract gaps, and both serve your top two clients (Meridian Bank, GovNet). This is a single point of supply-chain failure feeding directly into client-facing posture. Prioritise reassessment.</p></div></div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3>ISO <i>Supplier Controls</i></h3><span class="c2">A.5.19–A.5.23</span></div>
+      <div class="cov" id="cov"></div></div>
+    <div class="panel"><div class="panel__h"><h3><span class="mon" style="display:inline-flex"><i></i></span> Monitoring <i>Feed</i></h3><span class="c2" id="feed-c">live</span></div>
+      <div class="feed" id="feed"></div></div>
+  </div>
+</div>
+
+<div class="fly-mask" id="fly-mask"></div>
+<aside class="fly" id="fly"></aside>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+
+/* ===================== DATA ===================== */
+// name, category, score, dataAccess, assess, contract, clients[], controls[], gapControls[], lastAssessed, nextDue
+const V=[
+ ["DataVault Cloud","Cloud Infrastructure",84,"Customer PII · Financial records","OVERDUE","GAP",["Meridian Bank","GovNet"],["A.5.19","A.5.20","A.5.21","A.5.23"],["A.5.20"],"2025-09-14","2026-03-14"],
+ ["FinWire Settlement","Settlement Network",77,"Transaction & settlement data","OVERDUE","GAP",["Meridian Bank","GovNet"],["A.5.19","A.5.21","A.5.22"],["A.5.20"],"2025-10-02","2026-04-02"],
+ ["PayBridge Gateway","Payment Processing",71,"Cardholder data (PCI)","ASSESSED","COMPLIANT",["Apex RMG"],["A.5.19","A.5.20","A.5.21"],[],"2026-04-22","2026-10-22"],
+ ["NimbusHost CDN","Hosting / CDN",62,"Public web assets","ASSESSED","COMPLIANT",["GovNet"],["A.5.19","A.5.23"],[],"2026-03-30","2026-09-30"],
+ ["AuthCore IdP","Identity Provider",58,"Credentials & access tokens","ASSESSED","COMPLIANT",["Meridian Bank","Apex RMG"],["A.5.19","A.5.20"],[],"2026-05-11","2026-11-11"],
+ ["CodeForge DevOps","CI/CD Platform",53,"Source code & secrets","ASSESSED","COMPLIANT",[],["A.5.19","A.5.21"],[],"2026-02-18","2026-08-18"],
+ ["MetricFlow Analytics","Analytics SaaS",48,"Product usage data","PENDING","GAP",[],["A.5.19"],["A.5.20","A.5.23"],"2025-12-05","2026-06-05"],
+ ["SecureMail Corp","Email / Comms",46,"Internal communications","PENDING","GAP",[],["A.5.19","A.5.23"],["A.5.20"],"2025-11-28","2026-05-28"],
+ ["OfficeSuite Cloud","Productivity Suite",44,"Documents & files","ASSESSED","COMPLIANT",["GovNet"],["A.5.19","A.5.23"],[],"2026-04-08","2026-10-08"],
+ ["BackupVault DR","Backup / DR",41,"All system backups","ASSESSED","COMPLIANT",["Meridian Bank"],["A.5.19","A.5.21","A.5.23"],[],"2026-05-20","2026-11-20"],
+ ["LogiChain Logistics","Logistics / SCM",39,"Shipment manifests","ASSESSED","COMPLIANT",["Apex RMG"],["A.5.19","A.5.22"],[],"2026-03-15","2026-09-15"],
+ ["ShieldSOC MSSP","Managed Security",35,"Security telemetry","ASSESSED","COMPLIANT",["Meridian Bank","GovNet"],["A.5.19","A.5.22"],[],"2026-05-25","2026-11-25"]
+].map(r=>({name:r[0],category:r[1],score:r[2],data:r[3],assess:r[4],contract:r[5],clients:r[6],controls:r[7],gaps:r[8],last:r[9],due:r[10]}));
+
+const TIER=s=>s>=80?["CRITICAL","var(--crit)"]:s>=60?["HIGH","var(--high)"]:s>=45?["MEDIUM","var(--med)"]:["LOW","var(--low)"];
+const fmt=n=>n.toLocaleString();
+
+/* ===================== DONUT (risk tiers) ===================== */
+(function(){
+ const bands=[["CRITICAL","var(--crit)","#e0533d"],["HIGH","var(--high)","#e08a3d"],["MEDIUM","var(--med)","#d4af37"],["LOW","var(--low)","#5fb87a"]];
+ const counts=bands.map(b=>({name:b[0],col:b[2],n:V.filter(v=>TIER(v.score)[0]===b[0]).length}));
+ const tot=V.length;let off=0;const r=42,C=2*Math.PI*r;let g="";
+ counts.forEach(c=>{if(!c.n)return;const len=c.n/tot*C;
+   g+=`<circle cx="60" cy="60" r="${r}" fill="none" stroke="${c.col}" stroke-width="14" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}"/>`;off+=len;});
+ $("#donut").innerHTML=g;
+ $("#donut-lg").innerHTML=counts.map(c=>`<div class="row"><span><span class="dot" style="background:${c.col}"></span>${c.name}</span><b class="num">${c.n}</b></div>`).join("");
+})();
+
+/* ===================== ASSESSMENT STATUS BARS ===================== */
+(function(){
+ const grp=[["ASSESSED","#5fb87a"],["PENDING","#d4af37"],["OVERDUE","#e0533d"]].map(([s,c])=>({s,c,n:V.filter(v=>v.assess===s).length}));
+ const max=Math.max(...grp.map(g=>g.n));
+ $("#bars").innerHTML=grp.map(g=>`<div class="b1"><span class="lbl">${g.s}</span><div class="track"><i style="width:${g.n/max*100}%;background:${g.c}"></i></div><span class="v">${g.n}</span></div>`).join("");
+})();
+
+/* ===================== ISO CONTROL COVERAGE ===================== */
+(function(){
+ const COV=[
+  ["A.5.19","Supplier relationships",12,12,"#5fb87a"],
+  ["A.5.20","Supplier agreements",8,12,"#e0533d"],
+  ["A.5.21","ICT supply chain",6,12,"#d4af37"],
+  ["A.5.22","Monitoring supplier services",4,12,"#d4af37"],
+  ["A.5.23","Cloud services security",6,12,"#5fb87a"]
+ ];
+ $("#cov").innerHTML=COV.map(([id,t,a,b,c])=>{const pct=Math.round(a/b*100);const st=a===b?"COVERED":pct>=50?"PARTIAL":"GAP";
+  return `<div class="cv"><div class="cv__l"><div class="id">${id}</div><div class="t">${t}</div></div>
+   <div class="cv__r"><div class="frac" style="color:${c}">${a}/${b}</div><div class="st" style="color:${c}">${st}</div></div></div>`;}).join("");
+})();
+
+/* ===================== VENDOR REGISTER (sortable + flyout) ===================== */
+let sortK="score",dir=1;
+function tierPill(s){const[t,c]=TIER(s);return `<span class="tier" style="color:${c};border-color:${c}">${t}</span>`;}
+function render(){
+ V.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(typeof x==="string"){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-dir:x>y?dir:0;});
+ $("#reg-c").textContent=V.length+" vendors";
+ $("#body").innerHTML=V.map((v,i)=>{const[t,c]=TIER(v.score);return `<tr data-i="${i}">
+   <td class="vn">${v.name}</td><td style="color:var(--muted)">${v.category}</td>
+   <td class="r score" style="color:${c}">${v.score}</td><td>${tierPill(v.score)}</td>
+   <td><span class="pill pill--${v.assess==='ASSESSED'?'ok':v.assess==='PENDING'?'gold':'bad'}">${v.assess}</span></td>
+   <td><span class="pill pill--${v.contract==='COMPLIANT'?'ok':'bad'}">${v.contract}</span></td></tr>`;}).join("");
+ $$("#tbl th").forEach(th=>{th.querySelector(".ar")?.remove();if(th.dataset.s===sortK){const s=document.createElement("span");s.className="ar";s.textContent=dir>0?"▼":"▲";th.appendChild(s);}});
+ $$("#body tr").forEach(tr=>tr.addEventListener("click",()=>flyout(+tr.dataset.i)));
+}
+$$("#tbl th").forEach(th=>th.addEventListener("click",()=>{if(sortK===th.dataset.s)dir*=-1;else{sortK=th.dataset.s;dir=th.dataset.s==="score"?1:1;}render();}));
+
+/* flyout (sorted index → vendor) */
+function flyout(i){const v=[...$$("#body tr")].map(tr=>V[+tr.dataset.i])[i]||V[i];
+ const[t,c]=TIER(v.score);
+ const ctrls=v.controls.map(id=>`<span class="ctag ${v.gaps.includes(id)?'gap':''}">${id}${v.gaps.includes(id)?' ⚠':''}</span>`).join("");
+ const clients=v.clients.length?v.clients.join(", "):"<span style='color:var(--mute2)'>No client dependency</span>";
+ $("#fly").innerHTML=`
+  <div class="fly__h"><div><span class="eyebrow">Vendor Profile · ${v.category}</span><h2>${v.name}</h2></div>
+    <button class="x" onclick="closeFly()">✕</button></div>
+  <div class="fly__b">
+    <div class="scorebig"><b style="color:${c}">${v.score}</b><div><span>Risk Score</span><br>${tierPill(v.score)}</div></div>
+    <dl class="kv">
+      <dt>Data Accessed</dt><dd>${v.data}</dd>
+      <dt>Assessment</dt><dd><span class="pill pill--${v.assess==='ASSESSED'?'ok':v.assess==='PENDING'?'gold':'bad'}">${v.assess}</span></dd>
+      <dt>Contract</dt><dd><span class="pill pill--${v.contract==='COMPLIANT'?'ok':'bad'}">${v.contract}</span></dd>
+      <dt>Client Exposure</dt><dd>${clients}</dd>
+      <dt>Last Assessed</dt><dd class="num">${v.last}</dd>
+      <dt>Next Due</dt><dd class="num" style="color:${v.assess==='OVERDUE'?'var(--bad)':'var(--txt)'}">${v.due}</dd>
+    </dl>
+    <h4>Mapped ISO 27001 Controls</h4>
+    <div class="ctrls">${ctrls}</div>
+    ${v.gaps.length?`<p style="margin-top:14px;font-size:10.5px;color:var(--bad);line-height:1.6">⚠ ${v.gaps.length} control gap(s): security clauses missing in supplier agreement. Flag for contract remediation before renewal.</p>`:`<p style="margin-top:14px;font-size:10.5px;color:var(--ok);line-height:1.6">✓ All mapped controls satisfied. Standard surveillance cadence applies.</p>`}
+  </div>`;
+ $("#fly").classList.add("open");$("#fly-mask").classList.add("open");
+}
+function closeFly(){$("#fly").classList.remove("open");$("#fly-mask").classList.remove("open");}
+$("#fly-mask").addEventListener("click",closeFly);window.closeFly=closeFly;
+render();
+
+/* ===================== LIVE MONITORING FEED (bounded, no convergence) ===================== */
+const POOL=[
+ ["t-cve","DataVault Cloud","new CVE-2026-3318 in dependency · CVSS 8.1","tag-cve"],
+ ["t-ok","PayBridge Gateway","SOC 2 Type II report refreshed · no exceptions"],
+ ["t-info","AuthCore IdP","scheduled reassessment in 14 days"],
+ ["t-cve","FinWire Settlement","TLS cert expires in 9 days · action required"],
+ ["t-ok","ShieldSOC MSSP","continuous control attestation passed"],
+ ["t-info","NimbusHost CDN","new sub-processor added · DPA review queued"],
+ ["t-cve","SecureMail Corp","phishing-resistance gap flagged in scan"],
+ ["t-ok","BackupVault DR","DR restore test verified · RTO met"],
+ ["t-info","MetricFlow Analytics","assessment questionnaire issued"],
+ ["t-ok","OfficeSuite Cloud","ISO 27001 cert validity confirmed"]
+];
+let fed=0;
+function pushFeed(){
+ const [cls,vendor,msg]=POOL[Math.floor(Math.random()*POOL.length)];
+ const tagTxt=cls==="t-cve"?"ALERT":cls==="t-ok"?"PASS":"INFO";
+ const t=new Date().toLocaleTimeString('en-GB');
+ const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__t">${t}</span><div class="fe__b"><span class="fe__tag ${cls}">${tagTxt}</span><b>${vendor}</b> · ${msg}</div>`;
+ const f=$("#feed");f.prepend(e);while(f.children.length>26)f.lastChild.remove();
+ $("#feed-c").textContent=(++fed)+" events";
+ // bounded avg-risk jitter for "live" KPI
+ const cur=+$("#kp-avg").textContent;const next=Math.max(52,Math.min(58,cur+(Math.random()<.5?-1:1)));$("#kp-avg").textContent=next;
+}
+// seed a few, then stream
+[0,4,2].forEach(i=>{const[cls,vendor,msg]=POOL[i];const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__t">${new Date(Date.now()-i*60000).toLocaleTimeString('en-GB')}</span><div class="fe__b"><span class="fe__tag ${cls}">${cls==="t-cve"?"ALERT":cls==="t-ok"?"PASS":"INFO"}</span><b>${vendor}</b> · ${msg}</div>`;
+ $("#feed").appendChild(e);});
+$("#feed-c").textContent="3 events";fed=3;
+setInterval(pushFeed,3600);
+</script>
+</body>
+</html>
 
