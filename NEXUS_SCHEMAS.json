@@ -1,1 +1,254 @@
+{
+  "$schema": "nexus-os/phase-1/data-contracts",
+  "version": "0.1.0",
+  "doc": "Backend-agnostic JSON contracts for NEXUS OS. The orchestration layer (Apps Script doPost/doGet preferred; Make.com transitional) must satisfy these shapes. The frontend is transport-neutral by design — migrating the orchestrator never touches the UI.",
+  "currency_default": "BDT",
+  "id_conventions": {
+    "client": "CLT-####",
+    "proposal": "PRP-YYYY-####",
+    "contract": "CTR-YYYY-####",
+    "sla": "SLA-####",
+    "invoice": "INV-YYYY-{contract4}-{seq}",
+    "project": "PRJ-####",
+    "breach": "BRC-YYMMDD-###",
+    "adjustment": "ADJ-{breach_id}"
+  },
+
+  "modules": {
+
+    "crm": {
+      "vertical": "01",
+      "entity": "client",
+      "schema": {
+        "id": "CLT-0042",
+        "legal_name": "Meridian Bank Ltd",
+        "sector": "Banking | Fintech | RMG Export | Government",
+        "region": "string",
+        "status": "LEAD | ACTIVE | DORMANT | CHURNED",
+        "ltv": 4200000,
+        "contact": "string",
+        "since": "YYYY-MM",
+        "contracts": ["CTR-2026-0042"]
+      }
+    },
+
+    "proposals": {
+      "vertical": "02",
+      "entity": "proposal",
+      "lifecycle": "DRAFT → SENT → ACCEPTED|REJECTED|EXPIRED",
+      "on_accepted": "spawn contract; carry line_items + pricing forward",
+      "schema": {
+        "proposal_id": "PRP-2026-0055",
+        "client_id": "CLT-0055",
+        "version": 2,
+        "service": "Gap Assessment",
+        "line_items": [
+          { "sku": "GAP-ASSESS", "desc": "ISO 27001 gap analysis", "qty": 1, "unit_price": 220000 }
+        ],
+        "subtotal": 220000,
+        "currency": "BDT",
+        "status": "DRAFT",
+        "valid_until": "2026-07-15",
+        "converts_to": "CTR-2026-0055 | null"
+      }
+    },
+
+    "contracts": {
+      "vertical": "03",
+      "entity": "contract",
+      "note": "sla_id and billing_schedule are the two hooks every downstream financial event reads.",
+      "schema": {
+        "contract_id": "CTR-2026-0042",
+        "client_id": "CLT-0042",
+        "proposal_ref": "PRP-2026-0042",
+        "service": "Full Audit & Certification",
+        "value": 1200000,
+        "start": "2026-03-01",
+        "end": "2026-09-01",
+        "billing_schedule": "MILESTONE | MONTHLY | UPFRONT",
+        "sla_id": "SLA-0042",
+        "renewal_id": "REN-0042 | null",
+        "status": "DRAFT | ACTIVE | CLOSED | TERMINATED"
+      }
+    },
+
+    "billing": {
+      "vertical": "04",
+      "entity": "invoice",
+      "reactive": "Subscribes to sla.breach. total = subtotal + Σ(adjustments[].amount). Adjustments are PULLED from the adjustments store keyed by contract_id — never written into line_items.",
+      "schema": {
+        "invoice_id": "INV-2026-0042-03",
+        "contract_id": "CTR-2026-0042",
+        "client_id": "CLT-0042",
+        "currency": "BDT",
+        "issue": "2026-06-01",
+        "due": "2026-06-30",
+        "status": "DRAFT | ISSUED | PAID | OVERDUE",
+        "line_items": [
+          { "ref": "MS-03", "description": "On-Site Audit — milestone 3/5", "amount": 800000 }
+        ],
+        "subtotal": 800000,
+        "adjustments": [
+          {
+            "adj_id": "ADJ-BRC-260614-001",
+            "type": "SLA_PENALTY",
+            "source_breach_id": "BRC-260614-001",
+            "source_clause_id": "CLS-RESP-24H",
+            "label": "SLA breach · response time",
+            "model": "PERCENT_DISCOUNT",
+            "value": 10,
+            "amount": -80000,
+            "status": "PENDING | APPLIED | VOID"
+          }
+        ],
+        "total": 720000
+      }
+    },
+
+    "service_delivery": {
+      "vertical": "05",
+      "entity": "delivery",
+      "note": "Milestone completion is the single event that (a) authorises a billable line and (b) advances Project Monitoring's current_step.",
+      "schema": {
+        "delivery_id": "DEL-2026-0042",
+        "contract_id": "CTR-2026-0042",
+        "project_ref": "PRJ-0042",
+        "milestones": [
+          { "step": 3, "name": "On-Site Audit", "status": "PENDING | IN_PROGRESS | DONE", "evidence_uri": "gas://drive/...", "billable": true }
+        ],
+        "findings_total": 12,
+        "findings_resolved": 10,
+        "status": "ACTIVE | COMPLETE"
+      }
+    },
+
+    "post_activities": {
+      "vertical": "06",
+      "entity": "activity",
+      "schema": {
+        "activity_id": "ACT-2026-0042-01",
+        "contract_id": "CTR-2026-0042",
+        "type": "SURVEILLANCE | CORRECTIVE_FOLLOWUP | REVIEW | CSAT",
+        "due_date": "2026-12-01",
+        "cadence": "2_PER_YEAR | ANNUAL | ONE_OFF",
+        "triggers_invoice": true,
+        "status": "SCHEDULED | DUE | DONE | OVERDUE"
+      }
+    },
+
+    "tc_sla": {
+      "vertical": "07",
+      "entity": "sla",
+      "role": "PRODUCER of the reactive contract — emits sla.breach.",
+      "schema": {
+        "id": "SLA-0042",
+        "contract_id": "CTR-2026-0042",
+        "clauses": [
+          {
+            "clause_id": "CLS-RESP-24H",
+            "metric": "RESPONSE_TIME | REPORT_DELIVERY | UPTIME | SURVEILLANCE_CADENCE",
+            "unit": "hours | days | percent",
+            "threshold": 24,
+            "penalty": {
+              "model": "PERCENT_DISCOUNT | FLAT_CREDIT",
+              "value": 10,
+              "basis": "INVOICE_SUBTOTAL | FIXED",
+              "applies_to": "NEXT_INVOICE | CURRENT_INVOICE",
+              "cap_pct": 25
+            }
+          }
+        ]
+      }
+    },
+
+    "renewals": {
+      "vertical": "08",
+      "entity": "renewal",
+      "trigger": "Surface 30 days before contract.end.",
+      "schema": {
+        "renewal_id": "REN-0042",
+        "contract_id": "CTR-2026-0042",
+        "due_date": "2026-08-01",
+        "auto_renew": false,
+        "uplift_pct": 8,
+        "proposed_value": 1296000,
+        "notice_sent": false,
+        "status": "PENDING | OFFERED | RENEWED | LAPSED"
+      }
+    },
+
+    "project_monitoring": {
+      "vertical": "09",
+      "entity": "project",
+      "canonical_steps": [
+        "Pre-Audit Planning", "Opening Meeting", "On-Site Audit", "Findings Documentation",
+        "Closing Meeting", "Corrective Action", "Re-Audit & Certification", "Post-Cert Surveillance"
+      ],
+      "schema": {
+        "project_id": "PRJ-0042",
+        "client_id": "CLT-0042",
+        "contract_id": "CTR-2026-0042",
+        "current_step": 3,
+        "findings": 12,
+        "resolved": 10,
+        "start": "2026-03-01"
+      }
+    }
+  },
+
+  "reactive_contract": {
+    "name": "SLA_BREACH → BILLING_PENALTY",
+    "summary": "T&C/SLA emits a breach event; Billing consumes it and recomputes invoice totals. The two modules never call each other — the event bus is the only coupling.",
+    "flow": [
+      "1. Webhook (Apps Script doPost / Make.com) detects metric breach and POSTs the breach payload.",
+      "2. Store appends an entry to `breaches` (append-only audit log) and derives a PENDING `adjustment` keyed by contract_id.",
+      "3. NexusBus.emit('sla:breach', payload).",
+      "4. Billing (subscribed) pulls pendingFor(contract_id) and recomputes: total = subtotal + Σ adjustments.",
+      "5. On invoice ISSUE, backend flips matching adjustments PENDING → APPLIED so they are consumed exactly once."
+    ],
+    "breach_payload": {
+      "event": "sla.breach",
+      "breach_id": "BRC-260614-001",
+      "sla_id": "SLA-0042",
+      "clause_id": "CLS-RESP-24H",
+      "contract_id": "CTR-2026-0042",
+      "client_id": "CLT-0042",
+      "metric": "RESPONSE_TIME",
+      "unit": "hours",
+      "threshold": 24,
+      "observed": 41,
+      "severity": "MINOR | MAJOR | CRITICAL",
+      "detected_at": "2026-06-14T09:12:00+06:00",
+      "source": "apps_script_webhook | make_com | manual",
+      "penalty": {
+        "model": "PERCENT_DISCOUNT",
+        "value": 10,
+        "basis": "INVOICE_SUBTOTAL",
+        "applies_to": "NEXT_INVOICE",
+        "cap_pct": 25,
+        "status": "PENDING",
+        "computed_amount": -80000
+      }
+    },
+    "penalty_math": {
+      "PERCENT_DISCOUNT": "amount = -min( subtotal * value/100 , subtotal * cap_pct/100 )",
+      "FLAT_CREDIT": "amount = -value",
+      "basis_subtotal_source": "latest DRAFT invoice for contract_id"
+    },
+    "idempotency": "adjustment.adj_id = 'ADJ-' + breach_id. Re-POSTing the same breach_id must upsert, not duplicate. Consume on ISSUE by status flip, never by deletion (preserve the audit trail)."
+  },
+
+  "backend_endpoints": {
+    "note": "Single canonical doPost router on Apps Script; action discriminator in the body. Mirrors the existing decoupled spine — no third-party middleware required.",
+    "doPost": {
+      "url": "https://script.google.com/macros/s/<DEPLOY_ID>/exec",
+      "body": { "action": "sla.breach | invoice.issue | client.upsert | milestone.complete", "payload": "{...}" },
+      "returns": { "ok": true, "id": "BRC-260614-001" }
+    },
+    "doGet": {
+      "url": "https://script.google.com/macros/s/<DEPLOY_ID>/exec?collection=invoices&contract_id=CTR-2026-0042",
+      "returns": "[ {invoice}, ... ]"
+    }
+  }
+}
 
