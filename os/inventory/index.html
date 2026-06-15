@@ -1,1 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // INVENTORY & PROCUREMENT</title>
+<!-- RMG supply chain (Apex RMG) · Drop at handfilm.github.io/nexus/os/inventory/ · standalone · demo data.
+     Tabs: Overview · Inventory · Purchase Orders (flyout) · Audit Lens (supply-chain A.5.19–A.5.23). Live stock movements. -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;--blue:#5a8dd6;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --flyout-w:430px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-variant-numeric:tabular-nums}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.bar__l{display:flex;align-items:center;gap:18px}
+.back{border:1px solid var(--line);padding:6px 11px;font-size:10px;letter-spacing:1px;color:var(--muted);transition:.15s}.back:hover{border-color:var(--gold-edge);color:var(--gold)}
+.brand{display:flex;align-items:center;gap:11px}.brand__hex{color:var(--gold);font-size:18px}
+.brand b{font-size:14px;letter-spacing:3px}.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.bar__kpi{display:flex;gap:0}
+.k{padding:0 14px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:15px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}.k.amber b{color:var(--amber)}
+.k span{font-size:7.5px;letter-spacing:1.2px;color:var(--mute2);text-transform:uppercase}
+.cl{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.6px;color:var(--muted)}
+.cl i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tabs{display:flex;padding:0 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tab{padding:13px 18px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:.13s}
+.tab:hover{color:var(--txt)}.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab .b{display:inline-block;margin-left:7px;font-size:8px;padding:1px 6px;border:1px solid var(--gold-edge);color:var(--gold);letter-spacing:1px}
+
+.wrap{padding:24px;max-width:1340px;margin:0 auto}
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+.h1{font-size:19px;font-weight:700;letter-spacing:.6px;margin:7px 0 4px}.h1 i{color:var(--gold);font-style:normal}
+.sub{color:var(--muted);font-size:11px;max-width:70ch;margin-bottom:20px}
+
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:16px}
+.c{background:var(--panel);padding:15px 16px}
+.c .l{font-size:8px;letter-spacing:1.4px;color:var(--mute2);text-transform:uppercase}
+.c .v{font-size:18px;font-weight:700;margin-top:6px;line-height:1}.c .v.ok{color:var(--ok)}.c .v.bad{color:var(--bad)}.c .v.gold{color:var(--gold)}.c .v.amber{color:var(--amber)}
+.c .d{font-size:9px;margin-top:4px;color:var(--muted)}
+
+.panel{background:var(--panel);border:1px solid var(--line);margin-bottom:16px}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c2{font-size:9px;color:var(--mute2);letter-spacing:1px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:980px){.cards{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.bar__kpi{display:none}}
+
+/* value bars */
+.vb{padding:14px}
+.vbar{display:flex;align-items:center;gap:11px;margin-bottom:10px;font-size:11px}.vbar:last-child{margin:0}
+.vbar .lbl{width:110px;color:var(--muted);font-size:10px}
+.vbar .track{flex:1;height:15px;background:var(--soft)}.vbar .track i{display:block;height:100%;background:var(--gold);transition:width .4s}
+.vbar .v{width:90px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* reorder alerts */
+.al{display:flex;align-items:center;gap:11px;padding:10px 14px;border-bottom:1px solid var(--soft);font-size:11px}.al:last-child{border:0}
+.al__i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.al__n{flex:1}.al__n b{font-size:11px}.al__n span{display:block;font-size:9px;color:var(--mute2)}
+.al__s{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;text-align:right}
+
+/* PO status mini */
+.pos{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.poc{background:var(--panel);padding:13px}
+.poc .n{font-size:18px;font-weight:700}.poc .l{font-size:8.5px;letter-spacing:1px;color:var(--mute2);text-transform:uppercase;margin-top:3px}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{text-align:left;padding:9px 14px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2);cursor:pointer;user-select:none;white-space:nowrap}
+.tbl th.r{text-align:right}.tbl th:hover{color:var(--gold)}.tbl th .ar{color:var(--gold);font-size:8px;margin-left:3px}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--soft)}.tbl td.r{text-align:right}
+.tbl tbody tr.clk{cursor:pointer}.tbl tbody tr:hover{background:var(--panel2)}
+.sku{color:var(--mute2);font-size:10px}
+.pill{display:inline-block;padding:2px 7px;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;border:1px solid}
+.pill--ok{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.pill--bad{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.pill--amber{color:var(--amber);border-color:rgba(224,138,61,.4)}
+.pill--gold{color:var(--gold);border-color:var(--gold-edge)}
+.pill--blue{color:var(--blue);border-color:rgba(90,141,214,.4)}
+.pill--mute{color:var(--muted);border-color:var(--line)}
+
+/* movement feed */
+.feed{max-height:240px;overflow-y:auto}
+.fe{display:flex;gap:10px;padding:8px 14px;border-bottom:1px solid var(--soft);animation:fin .25s ease}
+@keyframes fin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.fe__t{color:var(--mute2);font-size:8.5px;white-space:nowrap;padding-top:1px;font-variant-numeric:tabular-nums}
+.fe__b{flex:1;font-size:10.5px}.fe__b b{color:var(--gold)}
+.fe__tag{font-size:7.5px;letter-spacing:1px;padding:1px 5px;border:1px solid;text-transform:uppercase;margin-right:6px}
+.t-in{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.t-out{color:var(--amber);border-color:rgba(224,138,61,.4)}
+
+/* flyout */
+.fly-mask{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;visibility:hidden;transition:.18s;z-index:40}
+.fly-mask.open{opacity:1;visibility:visible}
+.fly{position:fixed;top:0;right:0;height:100vh;width:var(--flyout-w);max-width:92vw;background:var(--panel);border-left:1px solid var(--gold-edge);transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.1,1);z-index:41;display:flex;flex-direction:column}
+.fly.open{transform:none}
+.fly__h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between}
+.fly__h h2{font-size:16px;font-weight:700;margin-top:4px}
+.fly__h .x{background:none;border:1px solid var(--line);color:var(--muted);width:28px;height:28px;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit}.fly__h .x:hover{border-color:var(--bad);color:var(--bad)}
+.fly__b{padding:20px;overflow-y:auto;flex:1}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:9px 14px;font-size:11.5px;margin-bottom:20px}
+.kv dt{color:var(--mute2);font-size:9px;letter-spacing:1.3px;text-transform:uppercase;padding-top:2px}
+.fly__b h4{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--soft);font-size:11px}
+.li:last-child{border:0}.li .d{color:var(--muted)}.li .a{font-variant-numeric:tabular-nums}
+.li.tot{font-weight:700;border-top:1px solid var(--line);margin-top:4px}.li.tot .a{color:var(--gold)}
+
+/* audit lens */
+.lens-note{display:flex;gap:11px;align-items:flex-start;padding:13px 16px;border:1px solid var(--gold-edge);background:var(--gold-dim);margin-bottom:16px;font-size:11px;line-height:1.6}
+.lens-note .i{color:var(--gold);font-size:15px}
+.map{width:100%;border-collapse:collapse;font-size:11.5px}
+.map th{text-align:left;padding:9px 16px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2)}
+.map td{padding:11px 16px;border-bottom:1px solid var(--soft);vertical-align:top}
+.map .cid{color:var(--gold);white-space:nowrap}
+.dot2{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+.xlink{color:var(--gold);border-bottom:1px dotted var(--gold-edge)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__l">
+    <a class="back" href="../hub/">‹ HUB</a>
+    <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>OS // INVENTORY</span></div></div>
+  </div>
+  <div class="bar__kpi">
+    <div class="k gold"><b id="kp-val">৳0</b><span>Stock Value</span></div>
+    <div class="k"><b id="kp-sku">14</b><span>SKUs</span></div>
+    <div class="k bad"><b id="kp-low">—</b><span>Reorder</span></div>
+    <div class="k"><b id="kp-po">—</b><span>Open POs</span></div>
+    <div class="k ok"><b>92%</b><span>On-Time</span></div>
+  </div>
+  <div class="cl"><i></i> Apex RMG · Gazipur</div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <div class="tab on" data-v="ov">Overview</div>
+  <div class="tab" data-v="inv">Inventory</div>
+  <div class="tab" data-v="po">Purchase Orders</div>
+  <div class="tab" data-v="lens">Audit Lens <span class="b">ISO</span></div>
+</nav>
+
+<div class="wrap">
+  <!-- OVERVIEW -->
+  <section class="view on" id="v-ov">
+    <span class="eyebrow">Supply chain · RMG export</span>
+    <h1 class="h1">Inventory <i>Overview</i></h1>
+    <p class="sub">Raw material, trims, packaging and finished-goods inventory for Apex RMG Exports, with live procurement. Demonstration data. Stock moves as production consumes and goods are received.</p>
+    <div class="cards" id="ov-cards"></div>
+    <div class="split">
+      <div class="panel"><div class="panel__h"><h3>Stock Value <i>by Category</i></h3><span class="c2">৳</span></div><div class="vb" id="vb"></div></div>
+      <div class="panel"><div class="panel__h"><h3>Live <i>Stock Movements</i></h3><span class="c2"><span style="color:var(--ok)">●</span> live</span></div><div class="feed" id="feed"></div></div>
+    </div>
+    <div class="split">
+      <div class="panel"><div class="panel__h"><h3>Reorder <i>Alerts</i></h3><span class="c2" id="al-c"></span></div><div id="alerts"></div></div>
+      <div class="panel"><div class="panel__h"><h3>Purchase Order <i>Status</i></h3></div><div class="pos" id="postat"></div></div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section class="view" id="v-inv">
+    <span class="eyebrow">Stock register</span>
+    <h1 class="h1">Inventory <i>Ledger</i></h1>
+    <p class="sub">All SKUs with reorder thresholds. Click a column to sort. Items at or below reorder point are flagged.</p>
+    <div class="panel"><div class="panel__h"><h3>SKU <i>Register</i></h3><span class="c2" id="inv-c"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="inv-tbl"><thead><tr>
+        <th data-s="sku">SKU</th><th data-s="name">Item</th><th data-s="cat">Category</th>
+        <th data-s="stock" class="r">In Stock</th><th data-s="reorder" class="r">Reorder Pt</th>
+        <th data-s="cost" class="r">Unit ৳</th><th data-s="value" class="r">Value ৳</th><th data-s="status">Status</th>
+      </tr></thead><tbody id="inv-body"></tbody></table></div></div>
+  </section>
+
+  <!-- PURCHASE ORDERS -->
+  <section class="view" id="v-po">
+    <span class="eyebrow">Procurement</span>
+    <h1 class="h1">Purchase <i>Orders</i></h1>
+    <p class="sub">Procurement pipeline across suppliers. Click any PO for line items.</p>
+    <div class="panel"><div class="panel__h"><h3>PO <i>Pipeline</i></h3><span class="c2" id="po-c"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="po-tbl"><thead><tr>
+        <th data-s="id">PO ID</th><th data-s="supplier">Supplier</th><th data-s="items">Items</th>
+        <th data-s="value" class="r">Value ৳</th><th data-s="eta">ETA</th><th data-s="status">Status</th>
+      </tr></thead><tbody id="po-body"></tbody></table></div></div>
+  </section>
+
+  <!-- AUDIT LENS -->
+  <section class="view" id="v-lens">
+    <span class="eyebrow">Compliance overlay</span>
+    <h1 class="h1">Audit <i>Lens</i> · Supply Chain</h1>
+    <p class="sub">How procurement maps to ISO 27001:2022 supplier &amp; supply-chain controls — feeding directly into <a class="xlink" href="../vendor/">Vendor Risk</a>.</p>
+    <div class="lens-note"><span class="i">⚖</span><div><b style="color:var(--gold)">Procurement is where supply-chain risk enters.</b> Every supplier here is a third party with access or dependency. The controls below govern that exposure — and two supplier agreements are missing the required security clauses, which is exactly what surfaces in a vendor audit.</div></div>
+    <div class="panel"><div class="panel__h"><h3>Supplier <i>Control Coverage</i></h3><span class="c2" id="lens-c"></span></div>
+      <div style="overflow-x:auto"><table class="map"><thead><tr><th>Control</th><th>Title</th><th>Relevance to procurement</th><th>Status</th></tr></thead><tbody id="lens-body"></tbody></table></div></div>
+  </section>
+</div>
+
+<div class="fly-mask" id="fly-mask"></div>
+<aside class="fly" id="fly"></aside>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>"৳"+Math.round(n).toLocaleString("en-IN");
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* tabs */
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{
+  $$(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+  $$(".view").forEach(v=>v.classList.remove("on"));$("#v-"+t.dataset.v).classList.add("on");
+  if(t.dataset.v==="inv")renderInv();if(t.dataset.v==="po")renderPO();
+}));
+
+/* ===================== DATA ===================== */
+// sku, name, cat, unit, stock, reorder, cost
+const SKU=[
+ ["FAB-001","Cotton Fabric 180gsm","Raw Material","yd",12400,5000,220],
+ ["FAB-002","Denim Fabric 12oz","Raw Material","yd",3200,4000,380],
+ ["FAB-003","Knit Jersey Fabric","Raw Material","yd",8600,5000,195],
+ ["YRN-001","Polyester Yarn","Raw Material","kg",1850,800,540],
+ ["TRM-001","Metal Zippers 5in","Trims","pcs",42000,20000,12],
+ ["TRM-002","Buttons 4-hole","Trims","pcs",9500,30000,2],
+ ["TRM-003","Sewing Thread","Trims","cones",6200,3000,45],
+ ["TRM-004","Woven Labels","Trims","pcs",88000,40000,3],
+ ["PKG-001","Poly Bags","Packaging","pcs",22000,25000,1],
+ ["PKG-002","Export Cartons","Packaging","pcs",4800,6000,38],
+ ["FG-001","Men's Tee","Finished Goods","pcs",18500,5000,420],
+ ["FG-002","Polo Shirt","Finished Goods","pcs",6200,5000,680],
+ ["FG-003","Denim Jacket","Finished Goods","pcs",1400,2000,1850],
+ ["FG-004","Pullover Hoodie","Finished Goods","pcs",9100,4000,1120]
+].map(r=>({sku:r[0],name:r[1],cat:r[2],unit:r[3],stock:r[4],reorder:r[5],cost:r[6]}));
+
+const PO=[
+ {id:"PO-2026-0188",supplier:"Meghna Textile Mills",status:"Sent",eta:"2026-06-22",items:[["Denim Fabric 12oz","5,000 yd",1900000]]},
+ {id:"PO-2026-0185",supplier:"Trim Source BD",status:"Approved",eta:"2026-06-25",items:[["Buttons 4-hole","40,000 pcs",80000],["Sewing Thread","2,000 cones",90000]]},
+ {id:"PO-2026-0182",supplier:"PackPro Industries",status:"Received",eta:"—",items:[["Export Cartons","8,000 pcs",304000],["Poly Bags","30,000 pcs",30000]]},
+ {id:"PO-2026-0179",supplier:"Knit Master Ltd",status:"Partial",eta:"2026-06-19",items:[["Knit Jersey Fabric","6,000 yd",1170000]]},
+ {id:"PO-2026-0190",supplier:"Trim Source BD",status:"Draft",eta:"—",items:[["Metal Zippers 5in","30,000 pcs",360000]]},
+ {id:"PO-2026-0175",supplier:"Meghna Textile Mills",status:"Closed",eta:"—",items:[["Cotton Fabric 180gsm","8,000 yd",1760000]]}
+];
+PO.forEach(p=>{p.value=p.items.reduce((s,i)=>s+i[2],0);p.itemCount=p.items.length;});
+
+const CATCOL={"Raw Material":"#d4af37","Trims":"#5a8dd6","Packaging":"#a06cff","Finished Goods":"#5fb87a"};
+const statusOf=s=>s.stock<s.reorder*0.5?["CRITICAL","#e0533d","bad"]:s.stock<s.reorder?["LOW","#e08a3d","amber"]:["OK","#5fb87a","ok"];
+const poPill={Draft:"mute",Approved:"gold",Sent:"blue",Partial:"amber",Received:"ok",Closed:"mute"};
+
+/* ===================== DERIVED + KPIs ===================== */
+const totalValue=()=>SKU.reduce((s,k)=>s+k.stock*k.cost,0);
+const lowCount=()=>SKU.filter(k=>k.stock<k.reorder).length;
+const openPO=()=>PO.filter(p=>p.status!=="Closed"&&p.status!=="Received").length;
+function updateKPIs(){
+ $("#kp-val").textContent="৳"+(totalValue()/1e6).toFixed(2)+"M";
+ $("#kp-sku").textContent=SKU.length;$("#kp-low").textContent=lowCount();$("#kp-po").textContent=openPO();
+}
+
+/* ===================== OVERVIEW ===================== */
+function renderOv(){
+ const tv=totalValue();
+ $("#ov-cards").innerHTML=`
+  <div class="c"><div class="l">Stock Value</div><div class="v gold num" id="ovc-val">৳${(tv/1e6).toFixed(2)}M</div><div class="d">${SKU.length} SKUs</div></div>
+  <div class="c"><div class="l">Raw Material</div><div class="v num">${fmt(SKU.filter(k=>k.cat==="Raw Material").reduce((s,k)=>s+k.stock*k.cost,0))}</div><div class="d">fabric & yarn</div></div>
+  <div class="c"><div class="l">Finished Goods</div><div class="v num">${fmt(SKU.filter(k=>k.cat==="Finished Goods").reduce((s,k)=>s+k.stock*k.cost,0))}</div><div class="d">ready to ship</div></div>
+  <div class="c"><div class="l">Reorder Alerts</div><div class="v bad num" id="ovc-low">${lowCount()}</div><div class="d">below threshold</div></div>
+  <div class="c"><div class="l">Open POs</div><div class="v amber num">${openPO()}</div><div class="d">${fmt(PO.filter(p=>p.status!=="Closed"&&p.status!=="Received").reduce((s,p)=>s+p.value,0))} value</div></div>`;
+ renderVB();renderAlerts();renderPostat();
+}
+function renderVB(){
+ const cats=["Raw Material","Trims","Packaging","Finished Goods"];
+ const vals=cats.map(c=>({c,v:SKU.filter(k=>k.cat===c).reduce((s,k)=>s+k.stock*k.cost,0)}));
+ const max=Math.max(...vals.map(x=>x.v));
+ $("#vb").innerHTML=vals.map(x=>`<div class="vbar"><span class="lbl">${x.c}</span><div class="track"><i style="width:${x.v/max*100}%;background:${CATCOL[x.c]}"></i></div><span class="v">${fmt(x.v)}</span></div>`).join("");
+}
+function renderAlerts(){
+ const low=SKU.filter(k=>k.stock<k.reorder).sort((a,b)=>(a.stock/a.reorder)-(b.stock/b.reorder));
+ $("#al-c").textContent=low.length+" items";
+ $("#alerts").innerHTML=low.length?low.map(k=>{const[s,c]=statusOf(k);
+   return `<div class="al"><span class="al__i" style="background:${c}"></span>
+   <div class="al__n"><b>${k.name}</b><span>${k.stock.toLocaleString()} ${k.unit} · reorder at ${k.reorder.toLocaleString()}</span></div>
+   <span class="al__s" style="color:${c}">${s}</span></div>`;}).join("")
+   :`<div style="padding:20px;text-align:center;color:var(--ok);font-size:11px">✓ All stock above reorder point</div>`;
+}
+function renderPostat(){
+ const grp={Draft:0,Approved:0,Sent:0,Partial:0,Received:0,Closed:0};PO.forEach(p=>grp[p.status]++);
+ const show=[["Draft","var(--muted)"],["Approved","var(--gold)"],["Sent","var(--blue)"],["Partial","var(--amber)"],["Received","var(--ok)"],["Closed","var(--mute2)"]];
+ $("#postat").innerHTML=show.map(([s,c])=>`<div class="poc"><div class="n" style="color:${c}">${grp[s]}</div><div class="l">${s}</div></div>`).join("");
+}
+
+/* ===================== INVENTORY TABLE ===================== */
+let isk="value",idir=1;
+function renderInv(){
+ const d=[...SKU];d.sort((a,b)=>{let x=isk==="value"?a.stock*a.cost:a[isk],y=isk==="value"?b.stock*b.cost:b[isk];
+   if(typeof x==="string"){x=x.toLowerCase();y=y.toLowerCase();return x<y?-idir:x>y?idir:0;}return (x-y)*idir;});
+ $("#inv-c").textContent=fmt(totalValue())+" total";
+ $("#inv-body").innerHTML=d.map(k=>{const[s,c,pc]=statusOf(k);return `<tr>
+   <td class="sku">${k.sku}</td><td>${k.name}</td><td style="color:var(--muted)">${k.cat}</td>
+   <td class="r num">${k.stock.toLocaleString()} <span style="color:var(--mute2)">${k.unit}</span></td>
+   <td class="r num" style="color:var(--mute2)">${k.reorder.toLocaleString()}</td>
+   <td class="r num">${k.cost}</td><td class="r num">${fmt(k.stock*k.cost)}</td>
+   <td><span class="pill pill--${pc}">${s}</span></td></tr>`;}).join("");
+ $$("#inv-tbl th").forEach(th=>{th.querySelector(".ar")?.remove();if(th.dataset.s===isk){const sp=document.createElement("span");sp.className="ar";sp.textContent=idir>0?"▼":"▲";th.appendChild(sp);}});
+}
+$$("#inv-tbl th").forEach(th=>th.addEventListener("click",()=>{if(isk===th.dataset.s)idir*=-1;else{isk=th.dataset.s;idir=1;}renderInv();}));
+
+/* ===================== PO TABLE + FLYOUT ===================== */
+let psk="id",pdir=-1;
+function renderPO(){
+ const d=[...PO];d.sort((a,b)=>{let x=psk==="value"?a.value:a[psk==="items"?"itemCount":psk],y=psk==="value"?b.value:b[psk==="items"?"itemCount":psk];
+   if(typeof x==="string"){x=x.toLowerCase();y=y.toLowerCase();return x<y?-pdir:x>y?pdir:0;}return (x-y)*pdir;});
+ $("#po-c").textContent=PO.length+" orders · "+fmt(PO.reduce((s,p)=>s+p.value,0));
+ $("#po-body").innerHTML=d.map((p,i)=>`<tr class="clk" data-id="${p.id}">
+   <td style="color:var(--gold)">${p.id}</td><td>${p.supplier}</td>
+   <td style="color:var(--muted)">${p.itemCount} line${p.itemCount>1?"s":""}</td>
+   <td class="r num">${fmt(p.value)}</td><td class="num" style="color:var(--muted)">${p.eta}</td>
+   <td><span class="pill pill--${poPill[p.status]}">${p.status}</span></td></tr>`).join("");
+ $$("#po-tbl th").forEach(th=>{th.querySelector(".ar")?.remove();if(th.dataset.s===psk){const sp=document.createElement("span");sp.className="ar";sp.textContent=pdir>0?"▼":"▲";th.appendChild(sp);}});
+ $$("#po-body tr").forEach(tr=>tr.addEventListener("click",()=>poFly(tr.dataset.id)));
+}
+$$("#po-tbl th").forEach(th=>th.addEventListener("click",()=>{if(psk===th.dataset.s)pdir*=-1;else{psk=th.dataset.s;pdir=1;}renderPO();}));
+function poFly(id){const p=PO.find(x=>x.id===id);
+ $("#fly").innerHTML=`<div class="fly__h"><div><span class="eyebrow">Purchase Order · ${p.status}</span><h2>${p.id}</h2></div><button class="x" onclick="closeFly()">✕</button></div>
+  <div class="fly__b">
+    <dl class="kv">
+      <dt>Supplier</dt><dd>${p.supplier}</dd>
+      <dt>Status</dt><dd><span class="pill pill--${poPill[p.status]}">${p.status}</span></dd>
+      <dt>ETA</dt><dd class="num">${p.eta}</dd>
+      <dt>Line items</dt><dd>${p.itemCount}</dd>
+    </dl>
+    <h4>Line Items</h4>
+    ${p.items.map(it=>`<div class="li"><span class="d">${it[0]} <span style="color:var(--mute2)">· ${it[1]}</span></span><span class="a">${fmt(it[2])}</span></div>`).join("")}
+    <div class="li tot"><span>PO Total</span><span class="a">${fmt(p.value)}</span></div>
+    <h4 style="margin-top:22px">Supplier Risk</h4>
+    <p style="font-size:10.5px;color:var(--muted);line-height:1.6;border-left:2px solid var(--line);padding-left:12px">This supplier is tracked in <a class="xlink" href="../vendor/">Vendor Risk</a>. Procurement should not release payment until the supplier's security-clause status (A.5.20) is confirmed compliant.</p>
+  </div>`;
+ $("#fly").classList.add("open");$("#fly-mask").classList.add("open");
+}
+function closeFly(){$("#fly").classList.remove("open");$("#fly-mask").classList.remove("open");}
+$("#fly-mask").addEventListener("click",closeFly);window.closeFly=closeFly;
+
+/* ===================== AUDIT LENS ===================== */
+const LENS=[
+ ["A.5.19","Supplier relationships","Security expectations defined for all 4 active suppliers","COMPLIANT","#5fb87a"],
+ ["A.5.20","Supplier agreements","Security clauses missing in 2 of 4 supplier contracts","NON-CONFORMANT","#e0533d"],
+ ["A.5.21","ICT supply chain","Components & materials traceable to source","IN REVIEW","#d4af37"],
+ ["A.5.22","Monitoring supplier services","Delivery & quality SLAs tracked (92% on-time)","COMPLIANT","#5fb87a"],
+ ["A.5.23","Cloud services","Procurement system hosted on assessed cloud","COMPLIANT","#5fb87a"]
+];
+$("#lens-c").textContent=LENS.length+" controls mapped";
+$("#lens-body").innerHTML=LENS.map(([id,t,r,s,c])=>`<tr><td class="cid">${id}</td><td>${t}</td><td style="color:var(--muted)">${r}</td>
+ <td><span class="dot2" style="background:${c}"></span><span class="st" style="color:${c}">${s}</span></td></tr>`).join("");
+
+/* ===================== LIVE STOCK MOVEMENTS ===================== */
+let fed=0;
+function pushFeed(cls,tag,msg){const t=new Date().toLocaleTimeString('en-GB');
+ const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__t">${t.slice(0,8)}</span><div class="fe__b"><span class="fe__tag ${cls}">${tag}</span>${msg}</div>`;
+ const f=$("#feed");f.prepend(e);while(f.children.length>30)f.lastChild.remove();fed++;
+}
+function tick(){
+ const k=pick(SKU);
+ if(Math.random()<.55){ // consumption to production (out)
+   const qty=Math.max(1,Math.round(k.stock*0.01)+rnd(1,40));k.stock=Math.max(0,k.stock-qty);
+   pushFeed("t-out","ISSUE",`<b>${k.name}</b> −${qty.toLocaleString()} ${k.unit} → production`);
+ }else{ // goods received (in)
+   const qty=rnd(50,500);k.stock+=qty;
+   pushFeed("t-in","RECEIPT",`<b>${k.name}</b> +${qty.toLocaleString()} ${k.unit} received`);
+ }
+ updateKPIs();
+ if($("#v-ov").classList.contains("on")){
+   $("#ovc-val")&&($("#ovc-val").textContent="৳"+(totalValue()/1e6).toFixed(2)+"M");
+   $("#ovc-low")&&($("#ovc-low").textContent=lowCount());renderVB();renderAlerts();}
+ if($("#v-inv").classList.contains("on"))renderInv();
+}
+
+/* boot */
+updateKPIs();renderOv();
+pushFeed("t-in","INIT",`Apex RMG · ${SKU.length} SKUs · ${fmt(totalValue())} on hand · live`);
+setInterval(tick,2600);
+</script>
+</body>
+</html>
 
