@@ -1,1 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // INCIDENT RESPONSE</title>
+<!-- SOC incident response · Drop at handfilm.github.io/nexus/os/incident/ · standalone · fictional demo data.
+     Live SIEM tape · active incidents · kill-chain lifecycle flyout · MITRE tactics · ISO A.5.24–A.5.28 coverage. -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;--blue:#5a8dd6;
+  --sev1:#e0533d;--sev2:#e08a3d;--sev3:#d4af37;--sev4:#5a8dd6;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --flyout-w:460px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-variant-numeric:tabular-nums}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.bar__l{display:flex;align-items:center;gap:18px}
+.back{border:1px solid var(--line);padding:6px 11px;font-size:10px;letter-spacing:1px;color:var(--muted);transition:.15s}.back:hover{border-color:var(--gold-edge);color:var(--gold)}
+.brand{display:flex;align-items:center;gap:11px}.brand__hex{color:var(--gold);font-size:18px}
+.brand b{font-size:14px;letter-spacing:3px}.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.bar__kpi{display:flex;gap:0}
+.k{padding:0 14px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:15px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}
+.k span{font-size:7.5px;letter-spacing:1.2px;color:var(--mute2);text-transform:uppercase}
+.soc{display:flex;align-items:center;gap:8px;font-size:9.5px;letter-spacing:1px;color:var(--muted);border:1px solid var(--line);padding:6px 11px}
+.soc b{color:var(--gold)}.soc i{width:7px;height:7px;border-radius:50%;background:var(--bad);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.head{padding:20px 24px 4px}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+.h1{font-size:19px;font-weight:700;letter-spacing:.6px;margin:7px 0 4px}.h1 i{color:var(--gold);font-style:normal}
+.sub{color:var(--muted);font-size:11px;max-width:72ch}
+
+.wrap{padding:14px 24px 60px;display:grid;grid-template-columns:266px 1fr 320px;gap:14px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line)}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c2{font-size:9px;color:var(--mute2);letter-spacing:1px}
+
+.bars{padding:14px}
+.b1{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:11px}.b1:last-child{margin:0}
+.b1 .lbl{width:48px;color:var(--muted);font-size:9px;letter-spacing:.5px;text-transform:uppercase}
+.b1 .track{flex:1;height:15px;background:var(--soft)}.b1 .track i{display:block;height:100%;transition:width .4s}
+.b1 .v{width:20px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+
+.q{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--soft);font-size:11px}.q:last-child{border:0}
+.q .l{color:var(--muted)}.q .n{font-weight:700;font-variant-numeric:tabular-nums}
+
+.mit{padding:6px 0}
+.mr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-bottom:1px solid var(--soft);font-size:10.5px}.mr:last-child{border:0}
+.mr .l{color:var(--muted)}.mr .n{color:var(--txt);font-variant-numeric:tabular-nums}
+
+/* incidents table */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{text-align:left;padding:9px 14px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--soft)}
+.tbl tbody tr{cursor:pointer}.tbl tbody tr:hover{background:var(--panel2)}.tbl tbody tr:hover .it{color:var(--gold)}
+.iid{color:var(--mute2);font-size:10px}
+.sev{display:inline-block;padding:2px 7px;font-size:8px;letter-spacing:1px;font-weight:700;border:1px solid}
+.stage{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+
+/* containment */
+.cm{padding:12px 14px;border-bottom:1px solid var(--soft)}.cm:last-child{border:0}
+.cm__t{display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:7px}
+.cm__t .id{color:var(--gold)}.cm__bar{height:4px;background:var(--soft)}.cm__bar i{display:block;height:100%;transition:width .5s}
+
+/* SIEM feed */
+.feed{max-height:440px;overflow-y:auto}
+.fe{display:flex;gap:9px;padding:9px 14px;border-bottom:1px solid var(--soft);animation:fin .25s ease;align-items:flex-start}
+@keyframes fin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.fe__t{color:var(--mute2);font-size:8px;white-space:nowrap;padding-top:2px;font-variant-numeric:tabular-nums}
+.fe__b{flex:1;font-size:10px;line-height:1.4}.fe__b b{color:var(--gold)}
+.fe__sev{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+
+/* flyout — kill-chain timeline */
+.fly-mask{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;visibility:hidden;transition:.18s;z-index:40}
+.fly-mask.open{opacity:1;visibility:visible}
+.fly{position:fixed;top:0;right:0;height:100vh;width:var(--flyout-w);max-width:94vw;background:var(--panel);border-left:1px solid var(--gold-edge);transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.1,1);z-index:41;display:flex;flex-direction:column}
+.fly.open{transform:none}
+.fly__h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.fly__h h2{font-size:15px;font-weight:700;margin-top:5px;line-height:1.35}
+.fly__h .x{background:none;border:1px solid var(--line);color:var(--muted);width:28px;height:28px;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit;flex-shrink:0}.fly__h .x:hover{border-color:var(--bad);color:var(--bad)}
+.fly__b{padding:20px;overflow-y:auto;flex:1}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:9px 14px;font-size:11.5px;margin-bottom:20px}
+.kv dt{color:var(--mute2);font-size:9px;letter-spacing:1.3px;text-transform:uppercase;padding-top:2px}
+.fly__b h4{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin:0 0 12px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.chain{position:relative;padding-left:24px;margin-bottom:20px}
+.chain::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:1px;background:var(--line)}
+.cs{position:relative;padding:0 0 16px}.cs:last-child{padding-bottom:0}
+.cs::before{content:"";position:absolute;left:-21px;top:3px;width:9px;height:9px;border-radius:50%;border:2px solid var(--line);background:var(--bg)}
+.cs.done::before{background:var(--ok);border-color:var(--ok)}
+.cs.now::before{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+.cs .ct{font-size:11.5px}.cs.done .ct{color:var(--txt)}.cs.now .ct{color:var(--gold);font-weight:700}.cs .ct{color:var(--mute2)}
+.cs .ctime{font-size:9px;color:var(--mute2);margin-top:2px;font-variant-numeric:tabular-nums}
+.ioc{font-size:10px;color:var(--muted);border-left:2px solid var(--line);padding-left:12px;line-height:1.7}
+.ioc b{color:var(--txt)}
+
+/* audit lens panel */
+.map{width:100%;border-collapse:collapse;font-size:11.5px}
+.map th{text-align:left;padding:9px 16px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2)}
+.map td{padding:11px 16px;border-bottom:1px solid var(--soft)}
+.map .cid{color:var(--gold);white-space:nowrap}
+.dot2{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}.bar__kpi,.soc{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__l">
+    <a class="back" href="../hub/">‹ HUB</a>
+    <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>OS // INCIDENT RESPONSE</span></div></div>
+  </div>
+  <div class="bar__kpi">
+    <div class="k"><b id="kp-open">6</b><span>Open</span></div>
+    <div class="k bad"><b id="kp-s1">1</b><span>SEV1</span></div>
+    <div class="k"><b>12m</b><span>MTTD</span></div>
+    <div class="k"><b>4.2h</b><span>MTTR</span></div>
+    <div class="k gold"><b id="kp-al">8,412</b><span>Alerts/24h</span></div>
+    <div class="k ok"><b>83%</b><span>Contained</span></div>
+  </div>
+  <div class="soc"><i></i> SOC · <b>MD Ali</b> · on call</div>
+</header>
+
+<div class="head">
+  <span class="eyebrow">Security operations · incident response</span>
+  <h1 class="h1">SOC <i>Incident</i> Console</h1>
+  <p class="sub">Live SIEM telemetry, active incident lifecycle and containment status. Alerts triage automatically; high-confidence detections escalate to incidents tracked through the full kill-chain. Click any incident for its timeline.</p>
+</div>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3>Severity</h3><span class="c2" id="sev-c"></span></div><div class="bars" id="sevbars"></div></div>
+    <div class="panel"><div class="panel__h"><h3>Alert <i>Triage</i></h3></div>
+      <div class="q"><span class="l">New</span><span class="n" id="q-new" style="color:var(--gold)">—</span></div>
+      <div class="q"><span class="l">Auto-triaged</span><span class="n" style="color:var(--blue)" id="q-tri">142</span></div>
+      <div class="q"><span class="l">Escalated</span><span class="n" style="color:var(--bad)" id="q-esc">6</span></div>
+      <div class="q"><span class="l">Suppressed (noise)</span><span class="n" style="color:var(--mute2)" id="q-sup">—</span></div></div>
+    <div class="panel"><div class="panel__h"><h3>Top <i>MITRE</i> Tactics</h3></div><div class="mit" id="mit"></div></div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3>Active <i>Incidents</i></h3><span class="c2" id="inc-c"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="inc-tbl"><thead><tr>
+        <th>ID</th><th>Incident</th><th>Client</th><th>Sev</th><th>Stage</th><th>Analyst</th>
+      </tr></thead><tbody id="inc-body"></tbody></table></div></div>
+    <div class="panel"><div class="panel__h"><h3>Incident-Management <i>Control Coverage</i></h3><span class="c2">ISO 27001 · A.5.24–A.5.28</span></div>
+      <div style="overflow-x:auto"><table class="map"><tbody id="lens-body"></tbody></table></div></div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="stack">
+    <div class="panel"><div class="panel__h"><h3><span style="color:var(--bad)">●</span> Live <i>SIEM Feed</i></h3><span class="c2" id="feed-c">live</span></div>
+      <div class="feed" id="feed"></div></div>
+    <div class="panel"><div class="panel__h"><h3>Containment <i>Status</i></h3></div><div id="contain"></div></div>
+  </div>
+</div>
+
+<div class="fly-mask" id="fly-mask"></div>
+<aside class="fly" id="fly"></aside>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ===================== INCIDENTS ===================== */
+const STAGES=["Detected","Triaged","Investigating","Containing","Eradicating","Recovering","Post-mortem","Closed"];
+const sevCol={SEV1:"var(--sev1)",SEV2:"var(--sev2)",SEV3:"var(--sev3)",SEV4:"var(--sev4)"};
+const INC=[
+ {id:"INC-2026-0039",title:"Ransomware detection on endpoint",client:"GovNet",sev:"SEV1",stage:4,analyst:"MD Ali",mitre:"T1486 · Data Encrypted for Impact",tactic:"Impact",
+  assets:["EP-4821 (workstation)","File Server FS-02"],contain:70,
+  iocs:["Hash: a3f9…c21d (suspicious binary)","Process: vssadmin delete shadows","Beacon: 185.x.x.x:443"],
+  events:[["09:02","Detected","EDR flagged mass file encryption"],["09:06","Triaged","SEV1 declared · SOC paged"],["09:14","Investigating","Patient-zero endpoint identified"],["09:31","Containing","EP-4821 network-isolated"],["—","Eradicating","Removing persistence · in progress"]]},
+ {id:"INC-2026-0042",title:"Suspected credential stuffing",client:"Meridian Bank",sev:"SEV2",stage:3,analyst:"MD Ali",mitre:"T1110 · Brute Force",tactic:"Credential Access",
+  assets:["Auth Gateway","Customer login API"],contain:55,
+  iocs:["6,200 login attempts / 4 min","Source: rotating proxy pool","Targeted: customer portal"],
+  events:[["07:41","Detected","Login velocity anomaly"],["07:48","Triaged","SEV2 · escalated"],["08:05","Investigating","Credential-stuffing pattern confirmed"],["—","Containing","Rate-limiting + CAPTCHA deployed"]]},
+ {id:"INC-2026-0051",title:"Outbound data exfiltration attempt",client:"Apex RMG",sev:"SEV2",stage:2,analyst:"SOC-2",mitre:"T1041 · Exfiltration over C2",tactic:"Exfiltration",
+  assets:["DB-03","Egress firewall"],contain:30,
+  iocs:["Outbound spike: 2.4 GB to unknown host","Destination: newly-registered domain","Off-hours transfer"],
+  events:[["06:18","Detected","DLP egress alert"],["06:25","Triaged","SEV2"],["—","Investigating","Tracing source process"]]},
+ {id:"INC-2026-0033",title:"Phishing campaign — staff targeted",client:"Internal",sev:"SEV3",stage:5,analyst:"SOC-2",mitre:"T1566 · Phishing",tactic:"Initial Access",
+  assets:["Mail gateway","12 mailboxes"],contain:90,
+  iocs:["Sender spoofs finance dept","Credential-harvest link","8 clicks · 0 credential submits"],
+  events:[["Yesterday","Detected","User-reported email"],["Yesterday","Containing","URL blocked · mails purged"],["Today","Recovering","Password resets issued"]]},
+ {id:"INC-2026-0028",title:"Unauthorized admin access",client:"Meridian Bank",sev:"SEV2",stage:6,analyst:"MD Ali",mitre:"T1078 · Valid Accounts",tactic:"Privilege Escalation",
+  assets:["Admin console"],contain:100,
+  iocs:["Login from impossible geo","Dormant service account reactivated"],
+  events:[["2d ago","Detected","Geo-impossible login"],["2d ago","Contained","Account disabled"],["1d ago","Recovering","Access review complete"],["Today","Post-mortem","Root-cause drafting"]]},
+ {id:"INC-2026-0019",title:"Volumetric DDoS on edge",client:"GovNet",sev:"SEV3",stage:6,analyst:"SOC-2",mitre:"T1498 · Network DoS",tactic:"Impact",
+  assets:["Edge / CDN"],contain:100,
+  iocs:["Peak 38 Gbps","Botnet source · scrubbing engaged"],
+  events:[["3d ago","Detected","Traffic surge"],["3d ago","Contained","Scrubbing + rate-limit"],["2d ago","Recovering","Service restored"],["Today","Post-mortem","Lessons-learned pending"]]}
+];
+
+/* ===================== LEFT PANELS ===================== */
+(function(){
+ const order=[["SEV1","#e0533d"],["SEV2","#e08a3d"],["SEV3","#d4af37"],["SEV4","#5a8dd6"]];
+ const cnt=order.map(([s,c])=>({s,c,n:INC.filter(i=>i.sev===s).length}));
+ const max=Math.max(1,...cnt.map(x=>x.n));$("#sev-c").textContent=INC.length+" open";
+ $("#sevbars").innerHTML=cnt.map(x=>`<div class="b1"><span class="lbl">${x.s}</span><div class="track"><i style="width:${x.n/max*100}%;background:${x.c}"></i></div><span class="v" style="color:${x.c}">${x.n}</span></div>`).join("");
+ // MITRE tactic breakdown
+ const m={};INC.forEach(i=>m[i.tactic]=(m[i.tactic]||0)+1);
+ const extra={"Defense Evasion":3,"Execution":2,"Persistence":1};Object.assign(extra,{});
+ const merged={...{"Initial Access":2,"Execution":2,"Defense Evasion":3,"Discovery":1},...m};
+ Object.entries(m).forEach(([k,v])=>merged[k]=(merged[k]||0)+0);
+ const rows=Object.entries(merged).sort((a,b)=>b[1]-a[1]).slice(0,6);
+ $("#mit").innerHTML=rows.map(([k,v])=>`<div class="mr"><span class="l">${k}</span><span class="n">${v}</span></div>`).join("");
+})();
+
+/* ===================== INCIDENTS TABLE ===================== */
+$("#inc-c").textContent=INC.length+" active";
+$("#inc-body").innerHTML=INC.map((i,idx)=>`<tr data-i="${idx}">
+ <td class="iid">${i.id}</td><td class="it">${i.title}</td><td style="color:var(--muted)">${i.client}</td>
+ <td><span class="sev" style="color:${sevCol[i.sev]};border-color:${sevCol[i.sev]}">${i.sev}</span></td>
+ <td><span class="stage" style="color:${i.stage>=6?'var(--ok)':'var(--amber)'}">${STAGES[i.stage]}</span></td>
+ <td style="color:var(--muted)">${i.analyst}</td></tr>`).join("");
+$$("#inc-body tr").forEach(tr=>tr.addEventListener("click",()=>flyout(+tr.dataset.i)));
+
+/* containment */
+$("#contain").innerHTML=INC.map(i=>{const c=i.contain>=100?"#5fb87a":i.contain>=60?"#d4af37":"#e0533d";
+ return `<div class="cm"><div class="cm__t"><span class="id">${i.id}</span><span style="color:${c}">${i.contain}%</span></div>
+   <div class="cm__bar"><i style="width:${i.contain}%;background:${c}"></i></div></div>`;}).join("");
+
+/* ===================== FLYOUT — kill-chain ===================== */
+function flyout(idx){const i=INC[idx];
+ const chain=STAGES.map((s,n)=>{const cls=n<i.stage?"done":n===i.stage?"now":"";
+   const ev=i.events.find(e=>e[1]===s);const time=n<i.stage?(ev?ev[0]:"✓"):n===i.stage?"in progress":"";
+   const note=ev?ev[2]:(n<i.stage?"completed":"pending");
+   return `<div class="cs ${cls}"><div class="ct">${s}</div><div class="ctime">${time?time+" · ":""}${note}</div></div>`;}).join("");
+ $("#fly").innerHTML=`
+  <div class="fly__h"><div><span class="eyebrow">${i.id} · ${i.tactic}</span><h2>${i.title}</h2></div>
+    <button class="x" onclick="closeFly()">✕</button></div>
+  <div class="fly__b">
+    <dl class="kv">
+      <dt>Severity</dt><dd><span class="sev" style="color:${sevCol[i.sev]};border-color:${sevCol[i.sev]}">${i.sev}</span></dd>
+      <dt>Client</dt><dd>${i.client}</dd>
+      <dt>MITRE ATT&CK</dt><dd>${i.mitre}</dd>
+      <dt>Affected</dt><dd>${i.assets.join("<br>")}</dd>
+      <dt>Analyst</dt><dd>${i.analyst}</dd>
+      <dt>Containment</dt><dd style="color:${i.contain>=100?'var(--ok)':'var(--amber)'}">${i.contain}%</dd>
+    </dl>
+    <h4>Response Lifecycle</h4>
+    <div class="chain">${chain}</div>
+    <h4>Indicators of Compromise</h4>
+    <div class="ioc">${i.iocs.map(x=>"▸ "+x).join("<br>")}</div>
+  </div>`;
+ $("#fly").classList.add("open");$("#fly-mask").classList.add("open");
+}
+function closeFly(){$("#fly").classList.remove("open");$("#fly-mask").classList.remove("open");}
+$("#fly-mask").addEventListener("click",closeFly);window.closeFly=closeFly;
+
+/* ===================== AUDIT LENS ===================== */
+const LENS=[
+ ["A.5.24","Incident management planning","IR plan, roles & runbooks defined","COMPLIANT","#5fb87a"],
+ ["A.5.25","Assessment & decision on events","SOC triage criteria & escalation matrix","COMPLIANT","#5fb87a"],
+ ["A.5.26","Response to incidents","Documented containment & eradication steps","COMPLIANT","#5fb87a"],
+ ["A.5.27","Learning from incidents","Post-mortems incomplete on 40% of closed incidents","NON-CONFORMANT","#e0533d"],
+ ["A.5.28","Collection of evidence","Forensic evidence handling & chain of custody","IN REVIEW","#d4af37"],
+ ["A.6.8","Security event reporting","Staff reporting channel + user-reported phishing","COMPLIANT","#5fb87a"],
+ ["A.8.16","Monitoring activities","SIEM coverage across CDE & critical assets","COMPLIANT","#5fb87a"]
+];
+$("#lens-body").innerHTML=LENS.map(([id,t,r,s,c])=>`<tr><td class="cid">${id}</td><td>${t}</td><td style="color:var(--muted)">${r}</td>
+ <td style="white-space:nowrap"><span class="dot2" style="background:${c}"></span><span class="stage" style="color:${c}">${s}</span></td></tr>`).join("");
+
+/* ===================== LIVE SIEM FEED ===================== */
+const ALERTS=[
+ ["high","Auth Gateway","multiple failed logins · 40 in 60s"],
+ ["med","EP-3340","suspicious PowerShell encoded command"],
+ ["high","Egress FW","outbound data spike to unknown host"],
+ ["low","Web-DMZ","port scan from external IP"],
+ ["med","VPN-02","brute-force attempt on VPN"],
+ ["high","DC-01","privilege escalation attempt"],
+ ["low","Mail GW","spoofed sender quarantined"],
+ ["med","EP-4821","unsigned binary execution"],
+ ["high","Core DB","anomalous query volume"],
+ ["low","Proxy","connection to newly-registered domain"]
+];
+const sevDot={high:"#e0533d",med:"#e08a3d",low:"#5a8dd6"};
+let alerts=8412,fed=0,sup=2840,nw=18;
+function pushAlert(){
+ const [sv,src,msg]=pick(ALERTS);const esc=sv==="high"&&Math.random()<.12;
+ const t=new Date().toLocaleTimeString('en-GB');
+ const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__sev" style="background:${sevDot[sv]}"></span><span class="fe__t">${t.slice(0,8)}</span>
+   <div class="fe__b">${esc?'<b style="color:var(--bad)">⚠ ESCALATED</b> · ':''}<b>${src}</b> · ${msg}</div>`;
+ const f=$("#feed");f.prepend(e);while(f.children.length>34)f.lastChild.remove();
+ alerts++;$("#kp-al").textContent=alerts.toLocaleString();
+ nw=Math.max(0,nw+(Math.random()<.5?1:-1));$("#q-new").textContent=nw;
+ sup+=rnd(0,3);$("#q-sup").textContent=sup.toLocaleString();
+ $("#feed-c").textContent=(++fed)+" streamed";
+}
+// seed
+[0,3,6].forEach(i=>{const[sv,src,msg]=ALERTS[i];const e=document.createElement("div");e.className="fe";
+ e.innerHTML=`<span class="fe__sev" style="background:${sevDot[sv]}"></span><span class="fe__t">${new Date(Date.now()-i*20000).toLocaleTimeString('en-GB').slice(0,8)}</span><div class="fe__b"><b>${src}</b> · ${msg}</div>`;
+ $("#feed").appendChild(e);});
+$("#q-new").textContent=nw;$("#q-sup").textContent=sup.toLocaleString();
+setInterval(pushAlert,1600);
+</script>
+</body>
+</html>
 
