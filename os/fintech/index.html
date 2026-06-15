@@ -1,1 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // FINTECH CORE</title>
+<!-- Payment core · Drop at handfilm.github.io/nexus/os/fintech/ · standalone · fictional demo data (Sonar Pay).
+     Tabs: Overview (live tape) · Transactions · Fraud · Audit Lens (PCI-DSS 4.0). Live transaction stream. -->
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#101010;--panel2:#141414;--raise:#181818;--line:#242424;--soft:#1b1b1b;
+  --gold:#d4af37;--gold-dim:rgba(212,175,55,.13);--gold-edge:rgba(212,175,55,.4);
+  --txt:#e9e9e9;--muted:#7a7a7a;--mute2:#555;
+  --ok:#5fb87a;--bad:#e0533d;--amber:#e08a3d;--blue:#5a8dd6;--violet:#a06cff;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.2px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--gold);color:#000}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1f1f1f;border:2px solid var(--bg)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-variant-numeric:tabular-nums}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+.bar__l{display:flex;align-items:center;gap:18px}
+.back{border:1px solid var(--line);padding:6px 11px;font-size:10px;letter-spacing:1px;color:var(--muted);transition:.15s}.back:hover{border-color:var(--gold-edge);color:var(--gold)}
+.brand{display:flex;align-items:center;gap:11px}.brand__hex{color:var(--gold);font-size:18px}
+.brand b{font-size:14px;letter-spacing:3px}.brand span{display:block;color:var(--mute2);font-size:8.5px;letter-spacing:2px;margin-top:2px}
+.bar__kpi{display:flex;gap:0}
+.k{padding:0 14px;border-left:1px solid var(--line);text-align:right}.k:first-child{border-left:0}
+.k b{display:block;font-size:15px;font-weight:700;line-height:1.1}.k.ok b{color:var(--ok)}.k.bad b{color:var(--bad)}.k.gold b{color:var(--gold)}
+.k span{font-size:7.5px;letter-spacing:1.2px;color:var(--mute2);text-transform:uppercase}
+.proc{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.6px;color:var(--muted)}
+.proc i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tabs{display:flex;padding:0 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tab{padding:13px 18px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:.13s}
+.tab:hover{color:var(--txt)}.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab .b{display:inline-block;margin-left:7px;font-size:8px;padding:1px 6px;border:1px solid var(--gold-edge);color:var(--gold);letter-spacing:1px}
+
+.wrap{padding:24px;max-width:1340px;margin:0 auto}
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{color:var(--gold);font-size:9px;letter-spacing:3px;text-transform:uppercase}
+.h1{font-size:19px;font-weight:700;letter-spacing:.6px;margin:7px 0 4px}.h1 i{color:var(--gold);font-style:normal}
+.sub{color:var(--muted);font-size:11px;max-width:70ch;margin-bottom:20px}
+
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:16px}
+.c{background:var(--panel);padding:15px 16px}
+.c .l{font-size:8px;letter-spacing:1.4px;color:var(--mute2);text-transform:uppercase}
+.c .v{font-size:19px;font-weight:700;margin-top:6px;line-height:1}.c .v.ok{color:var(--ok)}.c .v.bad{color:var(--bad)}.c .v.gold{color:var(--gold)}
+.c .d{font-size:9px;margin-top:4px;color:var(--muted)}
+
+.panel{background:var(--panel);border:1px solid var(--line);margin-bottom:16px}
+.panel__h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line)}
+.panel__h h3{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.panel__h h3 i{color:var(--gold);font-style:normal}
+.panel__h .c2{font-size:9px;color:var(--mute2);letter-spacing:1px}
+.split{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+.split3{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:980px){.cards{grid-template-columns:repeat(2,1fr)}.split,.split3{grid-template-columns:1fr}.bar__kpi{display:none}}
+
+/* volume chart */
+.cf{padding:16px 14px 10px}.cf svg{width:100%;height:160px;display:block;overflow:visible}
+.cf__lg{display:flex;gap:16px;margin-top:8px;font-size:9px;color:var(--muted)}.cf__lg i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:middle}
+/* donut */
+.donut{padding:16px;display:flex;align-items:center;gap:18px}
+.donut svg{transform:rotate(-90deg);flex-shrink:0}
+.donut__lg{flex:1;font-size:10.5px}
+.donut__lg .row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--soft)}.donut__lg .row:last-child{border:0}
+.donut__lg .dot{width:8px;height:8px;display:inline-block;margin-right:8px}
+
+/* live tape */
+.tape{max-height:420px;overflow-y:auto}
+.tx{display:grid;grid-template-columns:54px 1fr auto auto;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--soft);animation:fin .25s ease}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.tx__t{color:var(--mute2);font-size:8.5px;font-variant-numeric:tabular-nums}
+.tx__m b{font-size:11.5px}.tx__m span{display:block;font-size:9px;color:var(--mute2);margin-top:1px}
+.tx__a{text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.tx__s{text-align:right}
+.pill{display:inline-block;padding:2px 7px;font-size:8px;letter-spacing:.5px;text-transform:uppercase;border:1px solid}
+.pill--ok{color:var(--ok);border-color:rgba(95,184,122,.4)}
+.pill--bad{color:var(--bad);border-color:rgba(224,83,61,.4)}
+.pill--gold{color:var(--gold);border-color:var(--gold-edge)}
+.pill--blue{color:var(--blue);border-color:rgba(90,141,214,.4)}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{text-align:left;padding:9px 14px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2);cursor:pointer;user-select:none;white-space:nowrap}
+.tbl th.r{text-align:right}.tbl th:hover{color:var(--gold)}.tbl th .ar{color:var(--gold);font-size:8px;margin-left:3px}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--soft)}.tbl td.r{text-align:right}
+.tbl tbody tr:hover{background:var(--panel2)}
+.txid{color:var(--mute2);font-size:10px}
+.risk{display:inline-block;min-width:30px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 5px;border:1px solid}
+
+/* fraud reasons */
+.fr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--soft);font-size:11px}.fr:last-child{border:0}
+.fr .lbl{flex:1;color:var(--muted)}.fr .track{width:120px;height:12px;background:var(--soft)}.fr .track i{display:block;height:100%;background:var(--bad)}
+.fr .v{width:24px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* audit lens */
+.lens-note{display:flex;gap:11px;align-items:flex-start;padding:13px 16px;border:1px solid rgba(224,83,61,.4);background:rgba(224,83,61,.08);margin-bottom:16px;font-size:11px;line-height:1.6}
+.lens-note .i{color:var(--bad);font-size:15px}
+.map{width:100%;border-collapse:collapse;font-size:11.5px}
+.map th{text-align:left;padding:9px 16px;color:var(--mute2);font-weight:400;font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--panel2)}
+.map td{padding:11px 16px;border-bottom:1px solid var(--soft);vertical-align:top}
+.map .cid{color:var(--gold);white-space:nowrap}
+.dot2{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__l">
+    <a class="back" href="../hub/">‹ HUB</a>
+    <div class="brand"><span class="brand__hex">⬡</span><div><b>NEXUS</b><span>OS // FINTECH CORE</span></div></div>
+  </div>
+  <div class="bar__kpi">
+    <div class="k gold"><b id="kp-tpv">৳0</b><span>TPV Today</span></div>
+    <div class="k"><b id="kp-tx">0</b><span>Transactions</span></div>
+    <div class="k ok"><b id="kp-appr">—</b><span>Approval</span></div>
+    <div class="k bad"><b id="kp-fr">—</b><span>Fraud Rate</span></div>
+    <div class="k"><b id="kp-avg">৳0</b><span>Avg Ticket</span></div>
+  </div>
+  <div class="proc"><i></i> Sonar Pay · processing</div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <div class="tab on" data-v="ov">Overview</div>
+  <div class="tab" data-v="tx">Transactions</div>
+  <div class="tab" data-v="fraud">Fraud</div>
+  <div class="tab" data-v="lens">Audit Lens <span class="b">PCI-DSS</span></div>
+</nav>
+
+<div class="wrap">
+  <!-- OVERVIEW -->
+  <section class="view on" id="v-ov">
+    <span class="eyebrow">Live · payment processing</span>
+    <h1 class="h1">Payment <i>Command</i></h1>
+    <p class="sub">Real-time transaction processing for Sonar Pay. Demonstration data — no real cardholder information. Transactions stream live across card, wallet, bank and QR rails.</p>
+    <div class="cards" id="ov-cards"></div>
+    <div class="split">
+      <div class="panel"><div class="panel__h"><h3>Live <i>Transaction Tape</i></h3><span class="c2"><span style="color:var(--ok)">●</span> streaming</span></div>
+        <div class="tape" id="tape"></div></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel"><div class="panel__h"><h3>Volume <i>· 24h</i></h3><span class="c2">৳ lakh / hr</span></div>
+          <div class="cf"><svg id="vol-svg" viewBox="0 0 460 160" preserveAspectRatio="none"></svg></div></div>
+        <div class="panel"><div class="panel__h"><h3>Channel <i>Mix</i></h3></div>
+          <div class="donut"><svg width="110" height="110" viewBox="0 0 110 110" id="donut"></svg><div class="donut__lg" id="donut-lg"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRANSACTIONS -->
+  <section class="view" id="v-tx">
+    <span class="eyebrow">Authorization ledger</span>
+    <h1 class="h1">Transaction <i>Ledger</i></h1>
+    <p class="sub">All authorizations this session. Click a column to sort. Updates live.</p>
+    <div class="panel"><div class="panel__h"><h3>Authorizations</h3><span class="c2" id="tx-c"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="tx-tbl"><thead><tr>
+        <th data-s="id">Txn ID</th><th data-s="type">Type</th><th data-s="cp">Counterparty</th>
+        <th data-s="channel">Rail</th><th data-s="amount" class="r">Amount ৳</th><th data-s="risk" class="r">Risk</th><th data-s="status">Status</th>
+      </tr></thead><tbody id="tx-body"></tbody></table></div></div>
+  </section>
+
+  <!-- FRAUD -->
+  <section class="view" id="v-fraud">
+    <span class="eyebrow">Risk & fraud signals</span>
+    <h1 class="h1">Fraud <i>Monitor</i></h1>
+    <p class="sub">Flagged transactions and the signals that tripped them. High-risk authorizations are held for review.</p>
+    <div class="split3">
+      <div class="panel"><div class="panel__h"><h3>Flagged <i>Transactions</i></h3><span class="c2" id="fl-c"></span></div>
+        <div style="overflow-x:auto;max-height:360px"><table class="tbl" id="fl-tbl"><thead><tr><th>Txn ID</th><th>Counterparty</th><th class="r">Amount</th><th class="r">Risk</th><th>Signal</th></tr></thead><tbody id="fl-body"></tbody></table></div></div>
+      <div class="panel"><div class="panel__h"><h3>Signal <i>Breakdown</i></h3></div><div id="fr-break"></div></div>
+    </div>
+  </section>
+
+  <!-- AUDIT LENS -->
+  <section class="view" id="v-lens">
+    <span class="eyebrow">Compliance overlay</span>
+    <h1 class="h1">Audit <i>Lens</i> · PCI-DSS 4.0</h1>
+    <p class="sub">How this payment core maps to the 12 PCI-DSS requirements — the auditor's view of a system touching cardholder data.</p>
+    <div class="lens-note"><span class="i">⚠</span><div><b style="color:var(--bad)">A critical finding is already live.</b> Requirement 3 is non-compliant — CVV values were detected in transaction logs, which PCI-DSS prohibits storing under any circumstance. This is exactly the kind of finding that fails a fintech's audit and triggers card-network penalties. Showing it is the difference between a payments demo and a payments <i>audit</i>.</div></div>
+    <div class="panel"><div class="panel__h"><h3>Requirement <i>Coverage</i> · Cardholder Data Environment</h3><span class="c2" id="lens-c"></span></div>
+      <div style="overflow-x:auto"><table class="map"><thead><tr><th>Req</th><th>Title</th><th>Relevance to payment core</th><th>Status</th></tr></thead><tbody id="lens-body"></tbody></table></div></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>"৳"+Math.round(n).toLocaleString("en-IN");
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* tabs */
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{
+  $$(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+  $$(".view").forEach(v=>v.classList.remove("on"));$("#v-"+t.dataset.v).classList.add("on");
+  if(t.dataset.v==="tx")renderTx();if(t.dataset.v==="fraud")renderFraud();
+}));
+
+/* ===================== MODEL ===================== */
+const MERCH=["QuickMart","FoodDash","RideGo","GlowSalon","TechBazaar","MediPlus Pharmacy","EduPay","PowerBill Utility","StreamPlus","AirTicket BD","P2P Transfer","Merchant Payout"];
+const CHANNELS=[["Card","#d4af37"],["Wallet","#a06cff"],["Bank","#5a8dd6"],["QR","#5fb87a"]];
+const TYPES=["Payment","Payment","Payment","Transfer","Payout","Refund"];
+const FRAUD=["Velocity — 6 txn/min","Geo-location mismatch","High-risk BIN range","Amount anomaly","Device fingerprint mismatch","New beneficiary + high value"];
+let txSeq=70420;
+const txns=[];           // newest first
+let tpv=4820000, txCount=312, apprCount=284, declCount=21, flagCount=7; // session-to-date seed
+
+function mkTxn(){
+ const type=pick(TYPES);const ch=pick(CHANNELS);const cp=type==="Payout"?"Merchant Payout":type==="Transfer"?"P2P Transfer":pick(MERCH);
+ let amount=type==="Payout"?rnd(20000,250000):type==="Transfer"?rnd(500,80000):rnd(80,45000);
+ const risk=Math.random()<.08?rnd(86,99):Math.random()<.18?rnd(45,72):rnd(2,40);
+ let status,fr=null;
+ if(risk>=86){status="Flagged";fr=pick(FRAUD);}
+ else if(Math.random()<.07){status="Declined";}
+ else status="Approved";
+ return {id:"TX-"+(++txSeq),ts:new Date().toLocaleTimeString('en-GB'),type,channel:ch[0],chCol:ch[1],cp,amount,risk,status,fr};
+}
+const riskCol=r=>r>=86?"#e0533d":r>=45?"#e08a3d":"#5fb87a";
+const stPill=s=>s==="Approved"?"ok":s==="Declined"?"bad":s==="Flagged"?"gold":"blue";
+
+/* ===================== KPIs ===================== */
+function updateKPIs(){
+ $("#kp-tpv").textContent="৳"+(tpv/1e6).toFixed(2)+"M";
+ $("#kp-tx").textContent=txCount.toLocaleString();
+ $("#kp-appr").textContent=Math.round(apprCount/txCount*100)+"%";
+ $("#kp-fr").textContent=(flagCount/txCount*100).toFixed(1)+"%";
+ $("#kp-avg").textContent=fmt(tpv/apprCount);
+}
+function renderOvCards(){
+ $("#ov-cards").innerHTML=`
+  <div class="c"><div class="l">TPV Today</div><div class="v gold num">৳${(tpv/1e6).toFixed(2)}M</div><div class="d">approved volume</div></div>
+  <div class="c"><div class="l">Transactions</div><div class="v num">${txCount.toLocaleString()}</div><div class="d">this session</div></div>
+  <div class="c"><div class="l">Approval Rate</div><div class="v ok num">${Math.round(apprCount/txCount*100)}%</div><div class="d">${apprCount} approved</div></div>
+  <div class="c"><div class="l">Fraud Rate</div><div class="v bad num">${(flagCount/txCount*100).toFixed(1)}%</div><div class="d">${flagCount} flagged</div></div>
+  <div class="c"><div class="l">Decline Rate</div><div class="v num">${(declCount/txCount*100).toFixed(1)}%</div><div class="d">${declCount} declined</div></div>`;
+}
+
+/* ===================== TAPE ===================== */
+function tapeRow(t){return `<div class="tx">
+  <span class="tx__t">${t.ts.slice(0,8)}</span>
+  <div class="tx__m"><b>${t.cp}</b><span>${t.type} · ${t.channel} · ${t.id}</span></div>
+  <div class="tx__a">${fmt(t.amount)}</div>
+  <div class="tx__s"><span class="pill pill--${stPill(t.status)}">${t.status}</span></div></div>`;}
+function seedTape(){const f=$("#tape");f.innerHTML=txns.slice(0,14).map(tapeRow).join("");}
+
+/* ===================== VOLUME CHART (24h) ===================== */
+(function(){
+ const v=[];for(let h=0;h<24;h++){const day=Math.sin((h-7)/24*Math.PI*2)*.5+.6;v.push(Math.max(2,Math.round(day*40+rnd(0,12))));}
+ const W=460,H=160,pad=6,max=Math.max(...v)*1.12;
+ const x=i=>pad+i*((W-2*pad)/23),y=val=>H-pad-(val/max)*(H-2*pad);
+ const pts=v.map((val,i)=>x(i)+","+y(val)).join(" ");
+ let g="";for(let k=0;k<=3;k++){const gy=pad+k*((H-2*pad)/3);g+=`<line x1="${pad}" y1="${gy}" x2="${W-pad}" y2="${gy}" stroke="#1b1b1b"/>`;}
+ $("#vol-svg").innerHTML=g+`<polygon points="${pad},${H-pad} ${pts} ${W-pad},${H-pad}" fill="rgba(212,175,55,.08)"/>
+   <polyline points="${pts}" fill="none" stroke="#d4af37" stroke-width="1.6"/>`+
+   [0,8,16,23].map(h=>`<text x="${x(h)}" y="${H-1}" fill="#555" font-size="8" text-anchor="middle" font-family="monospace">${String(h).padStart(2,'0')}h</text>`).join("");
+})();
+
+/* ===================== CHANNEL DONUT ===================== */
+function renderDonut(){
+ const counts=CHANNELS.map(([n,c])=>({n,c,v:txns.filter(t=>t.channel===n).length||1}));
+ const tot=counts.reduce((s,x)=>s+x.v,0);let off=0;const r=38,C=2*Math.PI*r;let g="";
+ counts.forEach(x=>{const len=x.v/tot*C;g+=`<circle cx="55" cy="55" r="${r}" fill="none" stroke="${x.c}" stroke-width="13" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}"/>`;off+=len;});
+ $("#donut").innerHTML=g;
+ $("#donut-lg").innerHTML=counts.map(x=>`<div class="row"><span><span class="dot" style="background:${x.c}"></span>${x.n}</span><b class="num">${Math.round(x.v/tot*100)}%</b></div>`).join("");
+}
+
+/* ===================== TRANSACTIONS TABLE ===================== */
+let sortK="ts",dir=1;
+function renderTx(){
+ const data=[...txns];
+ data.sort((a,b)=>{let x=a[sortK==="cp"?"cp":sortK],y=b[sortK==="cp"?"cp":sortK];if(sortK==="amount"||sortK==="risk")return (a[sortK]-b[sortK])*dir;if(typeof x==="string"){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-dir:x>y?dir:0;});
+ $("#tx-c").textContent=txns.length+" shown";
+ $("#tx-body").innerHTML=data.slice(0,120).map(t=>`<tr>
+   <td class="txid">${t.id}</td><td>${t.type}</td><td>${t.cp}</td><td style="color:var(--muted)">${t.channel}</td>
+   <td class="r num">${fmt(t.amount)}</td>
+   <td class="r"><span class="risk" style="color:${riskCol(t.risk)};border-color:${riskCol(t.risk)}">${t.risk}</span></td>
+   <td><span class="pill pill--${stPill(t.status)}">${t.status}</span></td></tr>`).join("");
+ $$("#tx-tbl th").forEach(th=>{th.querySelector(".ar")?.remove();if(th.dataset.s===sortK){const s=document.createElement("span");s.className="ar";s.textContent=dir>0?"▼":"▲";th.appendChild(s);}});
+}
+$$("#tx-tbl th").forEach(th=>th.addEventListener("click",()=>{if(sortK===th.dataset.s)dir*=-1;else{sortK=th.dataset.s;dir=1;}renderTx();}));
+
+/* ===================== FRAUD ===================== */
+function renderFraud(){
+ const fl=txns.filter(t=>t.status==="Flagged");
+ $("#fl-c").textContent=fl.length+" flagged";
+ $("#fl-body").innerHTML=fl.slice(0,40).map(t=>`<tr><td class="txid">${t.id}</td><td>${t.cp}</td><td class="r num">${fmt(t.amount)}</td>
+   <td class="r"><span class="risk" style="color:#e0533d;border-color:#e0533d">${t.risk}</span></td><td style="color:var(--bad)">${t.fr}</td></tr>`).join("")
+   ||`<tr><td colspan="5" style="color:var(--mute2);padding:20px;text-align:center">No flagged transactions yet — watch the tape.</td></tr>`;
+ const m={};fl.forEach(t=>m[t.fr]=(m[t.fr]||0)+1);
+ const rows=Object.entries(m).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...rows.map(r=>r[1]));
+ $("#fr-break").innerHTML=rows.map(([r,n])=>`<div class="fr"><span class="lbl">${r}</span><div class="track"><i style="width:${n/max*100}%"></i></div><span class="v">${n}</span></div>`).join("")
+   ||`<div style="padding:20px;color:var(--mute2);font-size:11px;text-align:center">Signals will populate as fraud is detected.</div>`;
+}
+
+/* ===================== AUDIT LENS (PCI-DSS 4.0) ===================== */
+const LENS=[
+ ["Req 1","Network security controls","CDE segmented behind firewall, deny-by-default","COMPLIANT","#5fb87a"],
+ ["Req 3","Protect stored account data","PAN tokenized — but CVV found in logs (prohibited)","NON-COMPLIANT","#e0533d"],
+ ["Req 4","Encrypt cardholder data in transit","TLS 1.2+ enforced on all payment APIs","COMPLIANT","#5fb87a"],
+ ["Req 6","Secure systems & software","SAST/DAST in CI; dependency scanning","IN PROGRESS","#d4af37"],
+ ["Req 7","Restrict access need-to-know","Role-based access to the CDE","COMPLIANT","#5fb87a"],
+ ["Req 8","Authenticate access (MFA)","MFA on all admin & CDE access","COMPLIANT","#5fb87a"],
+ ["Req 10","Log & monitor all access","Centralized CDE access logging — retention gap","IN PROGRESS","#d4af37"],
+ ["Req 11","Test security regularly","Quarterly ASV scans + annual penetration test","COMPLIANT","#5fb87a"],
+ ["Req 12","Information security policy","InfoSec policy maintained & acknowledged","COMPLIANT","#5fb87a"]
+];
+$("#lens-c").textContent=LENS.length+" / 12 requirements shown";
+$("#lens-body").innerHTML=LENS.map(([id,t,r,s,c])=>`<tr><td class="cid">${id}</td><td>${t}</td><td style="color:var(--muted)">${r}</td>
+ <td><span class="dot2" style="background:${c}"></span><span class="st" style="color:${c}">${s}</span></td></tr>`).join("");
+
+/* ===================== LIVE STREAM ===================== */
+function tick(){
+ const t=mkTxn();txns.unshift(t);if(txns.length>160)txns.pop();
+ txCount++;
+ if(t.status==="Approved"){apprCount++;tpv+=t.amount;}
+ else if(t.status==="Declined")declCount++;
+ else if(t.status==="Flagged")flagCount++;
+ updateKPIs();
+ if($("#v-ov").classList.contains("on")){
+   $("#tape").insertAdjacentHTML("afterbegin",tapeRow(t));const tp=$("#tape");while(tp.children.length>14)tp.lastChild.remove();
+   renderOvCards();renderDonut();
+   if(t.status==="Flagged")$("#tape").firstElementChild.style.background="rgba(224,83,61,.06)";
+ }
+ if($("#v-tx").classList.contains("on"))renderTx();
+ if($("#v-fraud").classList.contains("on"))renderFraud();
+}
+
+/* boot: seed some transactions */
+for(let i=0;i<14;i++){const t=mkTxn();t.ts=new Date(Date.now()-i*9000).toLocaleTimeString('en-GB');txns.push(t);}
+updateKPIs();renderOvCards();seedTape();renderDonut();
+setInterval(tick,1700);
+</script>
+</body>
+</html>
 
